@@ -631,83 +631,63 @@
       }
 
       function findExistingVehicle(detectedVehicle) {
-        console.log('🔍 Searching for existing vehicle...');
-        console.log('🤖 GPT detected:', detectedVehicle);
-        console.log('📚 User vehicles in database:', userVehicles);
-        
-        const cleanDetectedPlate = cleanPlate(detectedVehicle.license_plate || detectedVehicle.plate);
-        console.log('🧹 Cleaned detected plate:', cleanDetectedPlate);
-        
-        const foundVehicle = userVehicles.find(vehicle => {
-          const cleanStoredPlate = cleanPlate(vehicle.license_plate);
-          console.log(`🔍 Comparing "${cleanDetectedPlate}" with stored "${cleanStoredPlate}"`);
-          
-          // Exact plate match
-          if (cleanDetectedPlate === cleanStoredPlate) {
-            console.log('✅ EXACT PLATE MATCH FOUND!');
-            return true;
-          }
-          
-          // Similar plate + make/model match (handles OCR errors)
-          const platesSimilar = cleanDetectedPlate.length >= 3 && 
-            cleanStoredPlate.includes(cleanDetectedPlate.substring(0, 3));
-          const makeModelMatch = vehicle.make.toLowerCase() === detectedVehicle.make.toLowerCase() &&
-            vehicle.model.toLowerCase() === detectedVehicle.model.toLowerCase();
-          
-          console.log(`📋 Similar plate: ${platesSimilar}, Make/Model match: ${makeModelMatch}`);
-          
-          if (platesSimilar && makeModelMatch) {
-            console.log('✅ SIMILAR MATCH FOUND!');
-            return true;
-          }
-          
-          return false;
-        });
-        
-        if (foundVehicle) {
-          console.log('🎉 Found existing vehicle:', foundVehicle);
-        } else {
-          console.log('❌ No existing vehicle found');
-        }
-        
-        return foundVehicle;
+        // This function is no longer needed - we use checkSpecificVehicle instead
+        console.log('🔄 Using direct database query instead of in-memory search');
+        return null;
       }
 
-      // Load user vehicles from Supabase
-      async function loadUserVehicles() {
+      // Check for specific vehicle by license plate (scalable)
+      async function checkSpecificVehicle(detectedPlate) {
         try {
           if (!supabase || !currentUser) {
-            console.log('No Supabase connection, skipping vehicle load');
-            userVehicles = [];
-            return;
+            console.log('No Supabase connection, skipping vehicle check');
+            return null;
           }
           
-          console.log('🔍 Loading user vehicles for:', currentUser.id);
+          console.log('🔍 Checking for specific vehicle with plate:', detectedPlate);
+          
           const { data, error } = await supabase
             .from('vehicles')
             .select(`
               *,
-              inspections(*)
+              inspections(
+                id, inspection_date, status, notes
+              )
             `)
-            .eq('user_id', currentUser.id);
+            .eq('user_id', currentUser.id)
+            .eq('license_plate', detectedPlate)
+            .order('inspections(inspection_date)', { ascending: false })
+            .limit('inspections', 5)  // Only last 5 inspections
+            .single();
           
-          if (error) {
-            console.error('❌ Error loading vehicles:', error);
-            throw error;
+          if (error && error.code !== 'PGRST116') {
+            console.error('❌ Error checking vehicle:', error);
+            return null;
           }
           
-          userVehicles = (data || []).map(vehicle => ({
-            ...vehicle,
-            inspectionHistory: vehicle.inspections || [],
-            totalInspections: vehicle.inspections?.length || 0
-          }));
+          if (data) {
+            console.log('✅ Found existing vehicle:', data);
+            return {
+              ...data,
+              inspectionHistory: data.inspections || [],
+              totalInspections: data.inspections?.length || 0
+            };
+          } else {
+            console.log('❌ No vehicle found with plate:', detectedPlate);
+            return null;
+          }
           
-          console.log('✅ Loaded user vehicles:', userVehicles);
-          console.log('📊 Vehicle details:', userVehicles.map(v => `${v.make} ${v.model} ${v.year} - ${v.license_plate}`));
         } catch (error) {
-          console.error("❌ Couldn't load user vehicles:", error);
-          userVehicles = [];
+          console.error("❌ Error in checkSpecificVehicle:", error);
+          return null;
         }
+      }
+
+      // Load user vehicles from Supabase (REMOVED - now we check specific plates)
+      async function loadUserVehicles() {
+        // This function is no longer needed - we query specific plates only
+        console.log('📝 Vehicle loading now happens per license plate detection');
+        userVehicles = []; // Keep empty - we don't pre-load all vehicles
       }
 
       // Start inspection
@@ -814,17 +794,18 @@
           
           if (result.success && result.vehicle) {
             console.log('🎯 GPT detected vehicle data:', JSON.stringify(result.vehicle, null, 2));
-            statusBar.textContent = "✅ Vehicle detected - checking history...";
+            statusBar.textContent = "✅ Vehicle detected - checking database...";
             
-            const existingVehicle = findExistingVehicle(result.vehicle);
+            // Use scalable database query instead of in-memory search
+            const existingVehicle = await checkSpecificVehicle(result.vehicle.license_plate);
             
             if (existingVehicle) {
-              console.log('📋 Found existing vehicle:', existingVehicle.license_plate);
+              console.log('📋 Found existing vehicle in database:', existingVehicle.license_plate);
               result.vehicle.id = existingVehicle.id;
               result.vehicle.inspectionHistory = existingVehicle.inspectionHistory || [];
               result.vehicle.totalInspections = existingVehicle.inspectionHistory?.length || 0;
               result.vehicle.lastInspection = existingVehicle.inspectionHistory?.length > 0 ? 
-                existingVehicle.inspectionHistory[existingVehicle.inspectionHistory.length - 1] : null;
+                existingVehicle.inspectionHistory[0] : null; // First item (most recent due to ordering)
               
               showVehicleHistoryConfirmation(result.vehicle);
             } else {
