@@ -393,7 +393,6 @@
           currentUser = { id: 'offline-user', email: 'offline@example.com' };
         }
       }
-      
       const steps = [
         "front_bumper",
         "driver_side_front_fender", 
@@ -1156,12 +1155,24 @@
         nextStep();
       });
 
-      // Initialize
+      // Initialize - simplified without the problematic line
       console.log('Setting up app...');
+      
+      // Test if currentUser exists
+      console.log('currentUser before init:', typeof currentUser);
+      
       initSupabase().then(() => {
+        console.log('currentUser after init:', currentUser);
         startCamera();
         loopStatus();
         console.log('Setup complete!');
+      }).catch(error => {
+        console.error('Setup failed:', error);
+        // Fallback initialization
+        currentUser = { id: 'fallback-user', email: 'fallback@test.com' };
+        startCamera();
+        loopStatus();
+        console.log('Setup complete with fallback!');
       });
     </script>
   </body>
