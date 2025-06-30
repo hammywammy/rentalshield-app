@@ -19,6 +19,7 @@
         top: 0;
         left: 0;
         z-index: 0;
+        background: #000;
       }
       #start-screen {
         position: fixed;
@@ -224,8 +225,18 @@
   <body>
     <script>
       let currentUser = null;
+      let appInitialized = false;
 
-      // Check authentication on page load
+      // Initialize app immediately for testing
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing app...');
+        // Skip auth for now to test buttons
+        currentUser = { id: 'test-user' };
+        initializeApp();
+      });
+
+      // Backup auth check (commented out for testing)
+      /*
       netlifyIdentity.on('init', user => {
           if (!user) {
               window.location.href = '/auth.html';
@@ -234,10 +245,16 @@
           
           currentUser = user;
           console.log('Authenticated user:', user);
-          initializeApp();
+          if (!appInitialized) {
+            initializeApp();
+          }
       });
+      */
 
       function initializeApp() {
+          if (appInitialized) return;
+          appInitialized = true;
+          
           console.log('Initializing app...');
           startCamera();
           loopStatus();
@@ -248,49 +265,60 @@
       function setupEventListeners() {
         console.log('Setting up event listeners...');
         
-        // Start inspection event listeners
-        document.getElementById('start-inspection-btn').addEventListener("click", async () => {
-          console.log('Start inspection clicked');
-          isTestMode = false;
-          await loadUserVehicles();
-          startInspection();
-        });
+        const startBtn = document.getElementById('start-inspection-btn');
+        const testBtn = document.getElementById('test-mode-btn');
+        const photoBtn = document.getElementById('photo-button');
+        const nextBtn = document.getElementById('next-button');
+        
+        if (startBtn) {
+          startBtn.addEventListener("click", async () => {
+            console.log('Start inspection clicked');
+            isTestMode = false;
+            await loadUserVehicles();
+            startInspection();
+          });
+        }
 
-        document.getElementById('test-mode-btn').addEventListener("click", async () => {
-          console.log('Test mode clicked');
-          isTestMode = true;
-          await autoSendTestPhotos();
-        });
+        if (testBtn) {
+          testBtn.addEventListener("click", async () => {
+            console.log('Test mode clicked');
+            isTestMode = true;
+            await autoSendTestPhotos();
+          });
+        }
 
-        // Photo and next button listeners
-        document.getElementById('photo-button').addEventListener("click", () => {
-          console.log('Photo button clicked');
-          if (isTestMode) {
-            handleTestUpload();
-          } else {
-            capturePhoto();
-          }
-        });
+        if (photoBtn) {
+          photoBtn.addEventListener("click", () => {
+            console.log('Photo button clicked');
+            if (isTestMode) {
+              handleTestUpload();
+            } else {
+              capturePhoto();
+            }
+          });
+        }
 
-        document.getElementById('next-button').addEventListener("click", async () => {
-          console.log('Next button clicked');
-          if (currentStep < steps.length - 1) {
-            currentStep++;
-            updateStep();
-          } else {
-            const vehicleText = vehicleInfo.make ? 
-              `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}` : 
-              "Vehicle";
-            stepInstruction.textContent = `🎉 ${vehicleText} inspection completed! Processing...`;
-            nextButton.style.display = "none";
-            photoButton.style.display = "none";
+        if (nextBtn) {
+          nextBtn.addEventListener("click", async () => {
+            console.log('Next button clicked');
+            if (currentStep < steps.length - 1) {
+              currentStep++;
+              updateStep();
+            } else {
+              const vehicleText = vehicleInfo.make ? 
+                `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}` : 
+                "Vehicle";
+              stepInstruction.textContent = `🎉 ${vehicleText} inspection completed! Processing...`;
+              nextBtn.style.display = "none";
+              photoBtn.style.display = "none";
 
-            await triggerInspectionComplete();
-          }
-        });
+              await triggerInspectionComplete();
+            }
+          });
+        }
       }
 
-      netlifyIdentity.init();
+      // netlifyIdentity.init();
     </script>
     
     <video id="video" autoplay muted playsinline></video>
@@ -379,6 +407,7 @@
       // Start camera
       async function startCamera() {
         try {
+          console.log('Requesting camera access...');
           const stream = await navigator.mediaDevices.getUserMedia({
             video: {
               facingMode: "environment",
@@ -391,6 +420,7 @@
           video.srcObject = stream;
           console.log("Camera started successfully");
         } catch (e) {
+          console.log('Primary camera failed, trying fallback...', e);
           try {
             const stream = await navigator.mediaDevices.getUserMedia({
               video: {
@@ -405,7 +435,8 @@
             console.log("Camera started with fallback settings");
           } catch (e2) {
             console.log("Camera not available:", e2);
-            // Still allow test mode to work
+            // Hide video element if no camera
+            video.style.display = 'none';
           }
         }
       }
