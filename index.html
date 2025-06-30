@@ -134,6 +134,34 @@
     </style>
   </head>
   <body>
+  <script>
+    let currentUser = null;
+
+    // Check authentication on page load
+    netlifyIdentity.on('init', user => {
+        if (!user) {
+            // No user logged in, redirect to auth
+            window.location.href = '/auth.html';
+            return;
+        }
+        
+        currentUser = user;
+        console.log('Authenticated user:', user);
+        
+        // Continue with your existing app initialization
+        initializeApp();
+    });
+
+    // Your existing initialization code goes in this function
+    function initializeApp() {
+        // Move your existing window.onload code here
+        startCamera();
+        loopStatus();
+        // ... rest of your existing code
+    }
+
+    netlifyIdentity.init();
+</script>
     <video id="video" autoplay muted playsinline></video>
 
     <!-- Camera flash effect -->

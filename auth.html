@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RentalShield - Login</title>
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .auth-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 2rem;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            min-width: 120px;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h1>🛡️ RentalShield</h1>
+        <p>Professional vehicle inspections in 5 minutes</p>
+        
+        <button onclick="netlifyIdentity.open('login')">Login</button>
+        <button onclick="netlifyIdentity.open('signup')">Sign Up</button>
+        
+        <p style="margin-top: 2rem; font-size: 14px; color: #666;">
+            Secure your rental vehicles with professional documentation
+        </p>
+    </div>
+
+    <script>
+        // Check if user is already logged in
+        netlifyIdentity.on('init', user => {
+            if (user) {
+                // User is logged in, redirect to dashboard
+                window.location.href = '/dashboard.html';
+            }
+        });
+
+        // Handle successful login
+        netlifyIdentity.on('login', user => {
+            console.log('Login successful:', user);
+            window.location.href = '/dashboard.html';
+        });
+
+        // Handle successful signup
+        netlifyIdentity.on('signup', user => {
+            console.log('Signup successful:', user);
+            netlifyIdentity.gotrue.currentUser().update({
+                data: { 
+                    full_name: user.user_metadata.full_name,
+                    avatar_url: user.user_metadata.avatar_url 
+                }
+            });
+        });
+
+        // Initialize
+        netlifyIdentity.init();
+    </script>
+</body>
+</html>
