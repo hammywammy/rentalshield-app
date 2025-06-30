@@ -196,14 +196,21 @@
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         max-width: 400px;
         width: 90%;
+        color: #333;
       }
       .vehicle-popup h3 {
         margin: 0 0 1rem 0;
         color: #333;
+        font-size: 1.3rem;
       }
       .vehicle-popup p {
         margin: 0.5rem 0;
         color: #666;
+        font-size: 1rem;
+      }
+      .vehicle-popup strong {
+        color: #333;
+        font-size: 1.1rem;
       }
       .popup-buttons {
         display: flex;
@@ -217,6 +224,7 @@
         border-radius: 0.5rem;
         cursor: pointer;
         font-size: 1rem;
+        font-weight: bold;
         transition: background-color 0.2s;
       }
       .btn-yes {
@@ -381,16 +389,48 @@
       // Start camera
       async function startCamera() {
         try {
-          console.log('Requesting camera...');
+          console.log('Requesting camera access...');
+          
+          // Request camera permission explicitly
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
+            video: {
+              facingMode: "environment", // Back camera
+              width: { ideal: 1280, max: 1280 },
+              height: { ideal: 720, max: 720 },
+              frameRate: { ideal: 30 },
+            },
             audio: false,
           });
+          
           video.srcObject = stream;
-          console.log("Camera started");
+          console.log("Camera started successfully");
+          
+          // Wait for video to be ready
+          video.onloadedmetadata = () => {
+            console.log('Video metadata loaded, camera ready');
+          };
+          
         } catch (e) {
-          console.log("Camera failed:", e);
-          video.style.display = 'none';
+          console.log('Primary camera failed, trying fallback...', e);
+          try {
+            // Fallback with lower quality
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: "environment",
+                width: { ideal: 1024, max: 1024 },
+                height: { ideal: 576, max: 576 },
+                frameRate: { ideal: 30 },
+              },
+              audio: false,
+            });
+            video.srcObject = stream;
+            console.log("Camera started with fallback settings");
+          } catch (e2) {
+            console.log("Camera access denied or not available:", e2);
+            // Show error message to user
+            statusBar.textContent = "📷 Camera access denied - please enable camera permissions";
+            statusBar.style.display = "block";
+          }
         }
       }
 
@@ -489,7 +529,7 @@
         setTimeout(() => flashEffect.classList.remove("active"), 100);
 
         if (currentStep === -1) {
-          // License plate step - real detection
+          // License plate step - silent detection
           detectLicensePlate();
         } else {
           // Regular inspection photo - upload to R2
@@ -497,7 +537,7 @@
         }
       }
 
-      // Real license plate detection with new API structure
+      // Real license plate detection with silent processing
       async function detectLicensePlate() {
         try {
           statusBar.textContent = "🔍 Analyzing license plate...";
@@ -523,14 +563,18 @@
               imageBase64: base64,
               checkPlateOnly: true,
               userId: currentUser?.id,
-              bucketPath: `rental-shield/users/${currentUser?.id || 'anonymous'}/vehicles/`
+              vehiclesPath: `rental-shield/users/${currentUser?.id || 'anonymous'}/vehicles/`
             })
           });
           
           const result = await response.json();
           console.log('Detection result:', result);
           
-          if (result.success && result.vehicle) {
+          // Process result silently - only show popup if vehicle detected
+          if (result.success && result.vehicle && result.vehicle.plate) {
+            // AI successfully detected vehicle info
+            statusBar.textContent = "✅ Vehicle detected - confirming details...";
+            
             // Check if this user already has this vehicle in their fleet
             const existingVehicle = findUserVehicle(result.vehicle);
             
@@ -546,14 +590,24 @@
               showVehicleConfirmation(result.vehicle, false);
             }
           } else {
-            console.log('No vehicle detected, showing manual entry');
-            showManualVehicleEntry();
+            // AI couldn't detect vehicle clearly - proceed silently or show manual entry
+            console.log('No clear vehicle detection, proceeding with manual entry');
+            statusBar.textContent = "⚠️ Could not detect vehicle details - manual entry required";
+            
+            // Small delay then show manual entry
+            setTimeout(() => {
+              showManualVehicleEntry();
+            }, 1500);
           }
           
         } catch (error) {
           console.error('License plate detection error:', error);
           statusBar.textContent = "⚠️ Detection failed - manual entry required";
-          showManualVehicleEntry();
+          
+          // Show manual entry after error
+          setTimeout(() => {
+            showManualVehicleEntry();
+          }, 1500);
         }
       }
 
@@ -1066,6 +1120,8 @@
 
       // Initialize
       console.log('Setting up camera...');
+      
+      // Start camera immediately when page loads
       startCamera();
       
       // Start lighting detection loop
