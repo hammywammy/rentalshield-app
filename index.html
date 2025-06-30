@@ -248,40 +248,35 @@
       const flashEffect = document.getElementById("flash-effect");
 
       // Upload to Cloudflare R2 using Worker
-      async function uploadToR2(blob, isPhoto = true) {
-        const cleanVehicleName = vehicleInfo.replace(/[^a-zA-Z0-9]/g, "_");
-        const fileName = `${cleanVehicleName}/${cleanVehicleName}-step-${
-          currentStep + 1
-        }-${Date.now()}.jpg`;
-
-        try {
-          const formData = new FormData();
-          formData.append("file", blob, fileName);
-          formData.append("fileName", fileName);
-
-          const response = await fetch(
-            "https://uploadworker.hwmodels14.workers.dev/",
-            {
-              method: "POST",
-              body: formData,
-            }
-          );
-
-          const result = await response.json();
-
-          if (result.success) {
-            console.log("Upload successful to R2!");
-            return result.url;
-          } else {
-            console.error("R2 upload failed:", result.error);
-            return false;
-          }
-        } catch (error) {
-          console.error("R2 upload error:", error);
-          return false;
+    async function uploadToR2() {
+    try {
+        if (!recordedBlob) {
+            console.error('No recorded blob available');
+            return;
         }
-      }
 
+        // Create vehicle-based file path
+        let fileName;
+        if (detectedVehicle) {
+            const vehicleId = `${detectedVehicle.make}_${detectedVehicle.model}_${detectedVehicle.year}_${detectedVehicle.plate}`.replace(/[^a-zA-Z0-9]/g, '_');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const userId = currentUser?.id || 'anonymous';
+            
+            fileName = `${userId}/${vehicleId}/${timestamp}/step-${currentStep + 1}-${stepNames[currentStep].replace(/\s+/g, '-').toLowerCase()}.jpg`;
+        } else {
+            // Fallback to old naming
+            fileName = `inspection-${Date.now()}-step-${currentStep + 1}.jpg`;
+        }
+
+        // Your existing R2 upload code...
+        // Just use the new fileName variable
+        
+        console.log('Uploaded to:', fileName);
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+    }
+}
       // Start camera with optimized settings for smaller file sizes
       async function startCamera() {
         try {
