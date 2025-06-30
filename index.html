@@ -241,22 +241,35 @@
     <script>
       let currentUser = null;
 
-      // Simple authentication - commented out for now
+      // Simple, standard authentication
       if (window.netlifyIdentity) {
         netlifyIdentity.on('init', user => {
           currentUser = user;
           if (user) {
             console.log('User authenticated:', user.email);
           } else {
-            console.log('No user authenticated');
-            // window.location.href = '/auth.html'; // Commented out for testing
+            console.log('No user authenticated - redirecting to auth');
+            // Simple redirect after 2 seconds to allow page to load
+            setTimeout(() => {
+              window.location.href = '/auth.html';
+            }, 2000);
           }
+        });
+        
+        // Handle successful login
+        netlifyIdentity.on('login', user => {
+          console.log('Login successful:', user.email);
+          currentUser = user;
+          // Stay on current page after login
         });
         
         netlifyIdentity.init();
       } else {
-        console.log('Netlify Identity not available - running without auth');
-        currentUser = { id: 'test-user', email: 'test@example.com' };
+        console.log('Netlify Identity not available');
+        // Redirect to auth if no identity system
+        setTimeout(() => {
+          window.location.href = '/auth.html';
+        }, 2000);
       }
     </script>
     
