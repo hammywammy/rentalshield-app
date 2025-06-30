@@ -3,24 +3,14 @@
   <head>
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Car Inspection Recorder</title>
     <style>
-      * {
-        box-sizing: border-box;
-        -webkit-tap-highlight-color: transparent;
-      }
-      
       body {
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: sans-serif;
         background: black;
-        overflow: hidden;
-        position: fixed;
-        width: 100%;
-        height: 100%;
       }
-      
       video {
         width: 100vw;
         height: 100vh;
@@ -31,14 +21,13 @@
         z-index: 0;
         background: #000;
       }
-      
       #start-screen {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.95);
+        background: rgba(0, 0, 0, 0.9);
         color: white;
         display: flex;
         flex-direction: column;
@@ -48,140 +37,103 @@
         z-index: 15;
         padding: 2rem;
       }
-      
       #start-screen h1 {
-        font-size: clamp(1.5rem, 5vw, 2.5rem);
+        font-size: 2rem;
         margin-bottom: 1rem;
-        font-weight: 600;
       }
-      
       #start-screen p {
-        font-size: clamp(1rem, 3vw, 1.2rem);
+        font-size: 1.2rem;
         margin-bottom: 2rem;
-        opacity: 0.9;
-        line-height: 1.5;
-        max-width: 500px;
+        opacity: 0.8;
+        line-height: 1.4;
       }
-      
       .btn {
         padding: 1rem 2rem;
         background: #4caf50;
         color: white;
         border: none;
-        border-radius: 12px;
-        font-size: clamp(1rem, 4vw, 1.2rem);
-        font-weight: 600;
+        border-radius: 0.5rem;
+        font-size: 1.2rem;
         cursor: pointer;
         margin: 0.5rem;
-        transition: all 0.2s;
-        min-height: 48px;
-        min-width: 120px;
-        touch-action: manipulation;
+        transition: background-color 0.2s;
       }
-      
-      .btn:active {
-        transform: scale(0.95);
+      .btn:hover {
         background: #45a049;
       }
-      
       .btn-test {
         background: #ff9800;
-        font-size: clamp(0.9rem, 3.5vw, 1rem);
+        font-size: 1rem;
       }
-      
-      .btn-test:active {
+      .btn-test:hover {
         background: #e68900;
       }
-      
       #status-bar {
         position: fixed;
-        top: env(safe-area-inset-top, 1rem);
+        top: 1rem;
         left: 1rem;
         right: 1rem;
-        background: rgba(0, 0, 0, 0.8);
+        background: rgba(0, 0, 0, 0.6);
         color: white;
         padding: 1rem;
-        font-size: clamp(1rem, 3.5vw, 1.2rem);
-        border-radius: 12px;
+        font-size: 1.2rem;
+        border-radius: 0.75rem;
         text-align: center;
         z-index: 10;
         user-select: none;
         display: none;
-        backdrop-filter: blur(10px);
       }
-      
       #step-instruction {
         position: fixed;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 120px);
+        bottom: 8rem;
         left: 1rem;
         right: 1rem;
-        background: rgba(0, 0, 0, 0.8);
+        margin: 0 auto;
+        background: rgba(0, 0, 0, 0.75);
         color: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        font-size: clamp(1.2rem, 4vw, 1.5rem);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        font-size: 1.5rem;
         text-align: center;
         z-index: 10;
         line-height: 1.4;
         user-select: none;
+        box-sizing: border-box;
         word-wrap: break-word;
         display: none;
-        backdrop-filter: blur(10px);
-        font-weight: 500;
       }
-      
       #photo-button,
       #next-button {
         position: fixed;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
-        padding: 1rem 2rem;
-        font-size: clamp(1.2rem, 4vw, 1.5rem);
-        font-weight: 600;
-        border-radius: 50px;
+        bottom: 1.5rem;
+        padding: 0.8rem 1.6rem;
+        font-size: 1.5rem;
+        border-radius: 1rem;
         border: none;
         color: white;
         cursor: pointer;
         z-index: 10;
         user-select: none;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-        transition: all 0.2s;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+        transition: background-color 0.3s, opacity 0.3s;
         display: none;
-        min-height: 60px;
-        touch-action: manipulation;
       }
-      
       #photo-button {
         left: 50%;
         transform: translateX(-50%);
-        background: linear-gradient(45deg, #2196f3, #1976d2);
-        font-size: clamp(1.3rem, 4.5vw, 1.8rem);
-        padding: 1.2rem 2.5rem;
-        min-width: 160px;
+        background-color: #2196f3;
+        font-size: 1.8rem;
+        padding: 1rem 2rem;
       }
-      
-      #photo-button:active {
-        transform: translateX(-50%) scale(0.95);
-        background: linear-gradient(45deg, #1976d2, #1565c0);
-      }
-      
       #next-button {
         right: 1rem;
-        background: linear-gradient(45deg, #4caf50, #388e3c);
-        min-width: 120px;
+        background-color: #4caf50;
       }
-      
-      #next-button:active {
-        transform: scale(0.95);
-        background: linear-gradient(45deg, #388e3c, #2e7d32);
-      }
-      
       #next-button:disabled {
-        background: #666;
+        background-color: #888;
         opacity: 0.5;
         cursor: not-allowed;
-        transform: none;
       }
-      
       .flash-effect {
         position: fixed;
         top: 0;
@@ -194,167 +146,120 @@
         pointer-events: none;
         transition: opacity 0.1s;
       }
-      
       .flash-effect.active {
-        opacity: 0.9;
+        opacity: 0.8;
       }
       
-      /* Mobile-optimized popup */
+      /* Vehicle confirmation popup */
       .vehicle-popup {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.9);
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-      }
-      
-      .vehicle-popup-content {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
         background: white;
         padding: 2rem;
-        border-radius: 16px;
+        border-radius: 1rem;
+        z-index: 1000;
         text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         max-width: 400px;
-        width: 100%;
+        width: 90%;
         color: #333;
-        max-height: 80vh;
-        overflow-y: auto;
       }
-      
       .vehicle-popup h3 {
         margin: 0 0 1rem 0;
         color: #333;
-        font-size: clamp(1.3rem, 5vw, 1.5rem);
-        font-weight: 600;
+        font-size: 1.3rem;
       }
-      
       .vehicle-popup p {
         margin: 0.5rem 0;
         color: #666;
-        font-size: clamp(1rem, 4vw, 1.1rem);
-        line-height: 1.4;
+        font-size: 1rem;
       }
-      
       .vehicle-popup strong {
         color: #333;
-        font-size: clamp(1.1rem, 4.5vw, 1.2rem);
+        font-size: 1.1rem;
       }
-      
       .popup-buttons {
         display: flex;
         gap: 1rem;
         justify-content: center;
-        margin-top: 2rem;
-        flex-wrap: wrap;
+        margin-top: 1.5rem;
       }
-      
       .popup-btn {
-        padding: 1rem 1.5rem;
+        padding: 0.8rem 1.5rem;
         border: none;
-        border-radius: 12px;
+        border-radius: 0.5rem;
         cursor: pointer;
-        font-size: clamp(1rem, 4vw, 1.1rem);
-        font-weight: 600;
-        transition: all 0.2s;
-        min-height: 48px;
-        min-width: 100px;
-        touch-action: manipulation;
+        font-size: 1rem;
+        font-weight: bold;
+        transition: background-color 0.2s;
       }
-      
-      .popup-btn:active {
-        transform: scale(0.95);
-      }
-      
       .btn-yes {
         background: #4caf50;
         color: white;
       }
-      
       .btn-no {
         background: #f44336;
         color: white;
       }
-      
-      .btn-yes:active {
+      .btn-yes:hover {
         background: #45a049;
       }
-      
-      .btn-no:active {
+      .btn-no:hover {
         background: #da190b;
       }
       
-      /* Manual vehicle form - mobile optimized */
+      /* Manual vehicle form */
       .manual-form {
         background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 12px;
+        padding: 1rem;
+        border-radius: 0.5rem;
         margin: 1rem 0;
         text-align: left;
       }
-      
       .form-row {
         display: flex;
         gap: 1rem;
         margin-bottom: 1rem;
-        flex-wrap: wrap;
       }
-      
-      .form-row > div {
-        flex: 1;
-        min-width: 120px;
-      }
-      
       .form-row input {
-        width: 100%;
-        padding: 0.8rem;
-        border: 2px solid #ddd;
-        border-radius: 8px;
-        font-size: clamp(1rem, 4vw, 1.1rem);
-        transition: border-color 0.2s;
+        flex: 1;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 0.25rem;
       }
-      
-      .form-row input:focus {
-        outline: none;
-        border-color: #4caf50;
-      }
-      
       .form-row label {
         display: block;
-        font-size: clamp(0.9rem, 3.5vw, 1rem);
+        font-size: 0.9rem;
         color: #666;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-      }
-      
-      /* Loading states */
-      .loading {
-        opacity: 0.7;
-        pointer-events: none;
-      }
-      
-      @media (max-width: 480px) {
-        .form-row {
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-        
-        .popup-buttons {
-          flex-direction: column;
-          align-items: stretch;
-        }
-        
-        .popup-btn {
-          width: 100%;
-        }
+        margin-bottom: 0.25rem;
       }
     </style>
   </head>
   <body>
+    <script>
+      let currentUser = null;
+
+      // Simple authentication - commented out for now
+      if (window.netlifyIdentity) {
+        netlifyIdentity.on('init', user => {
+          currentUser = user;
+          if (user) {
+            console.log('User authenticated:', user.email);
+          } else {
+            console.log('No user authenticated');
+            // window.location.href = '/auth.html'; // Commented out for testing
+          }
+        });
+        
+        netlifyIdentity.init();
+      } else {
+        console.log('Netlify Identity not available - running without auth');
+        currentUser = { id: 'test-user', email: 'test@example.com' };
+      }
+    </script>
+    
     <video id="video" autoplay muted playsinline></video>
     <div id="flash-effect" class="flash-effect"></div>
 
@@ -377,185 +282,40 @@
     <button id="next-button" disabled>Next Step</button>
 
     <script>
-      console.log('🚀 Car Inspection App Starting...');
-      console.log('📱 User Agent:', navigator.userAgent);
-      console.log('🌐 URL:', window.location.href);
+      console.log('Script starting...');
       
-      // Mobile detection
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      console.log('📱 Device Type:', { isMobile, isTouchDevice });
-      
-      // MOBILE-FIRST AUTHENTICATION
-      let currentUser = null;
-      let authInitialized = false;
-      let authCheckComplete = false;
-      let loginInProgress = false;
-      
-      // Check for auth callback parameters
-      const urlParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const hasAuthToken = urlParams.has('access_token') || 
-                          hashParams.has('access_token') || 
-                          urlParams.has('confirmation_token') ||
-                          window.location.href.includes('#access_token');
-      
-      console.log('🔐 Auth callback detected:', hasAuthToken);
-      
-      if (hasAuthToken) {
-        console.log('⏳ Auth callback in URL - preventing immediate redirects');
-        loginInProgress = true;
-      }
-      
-      // Initialize Netlify Identity
-      if (window.netlifyIdentity) {
-        console.log('🔐 Initializing Netlify Identity...');
-        
-        // CRITICAL: Handle login event FIRST
-        netlifyIdentity.on('login', (user) => {
-          console.log('✅ LOGIN EVENT FIRED:', user.email);
-          currentUser = user;
-          loginInProgress = false;
-          authCheckComplete = true;
-          
-          // Clean URL
-          if (hasAuthToken) {
-            console.log('🧹 Cleaning auth parameters from URL');
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
-          }
-          
-          console.log('🎉 Login successful - user can use app');
-        });
-        
-        // Handle logout
-        netlifyIdentity.on('logout', () => {
-          console.log('🚪 Logout event');
-          currentUser = null;
-          authCheckComplete = false;
-          loginInProgress = false;
-          window.location.href = '/auth.html';
-        });
-        
-        // Handle initialization
-        netlifyIdentity.on('init', (user) => {
-          console.log('🔐 Identity initialized with user:', user ? user.email : 'none');
-          authInitialized = true;
-          
-          if (user) {
-            console.log('✅ User already logged in from init');
-            currentUser = user;
-            authCheckComplete = true;
-          } else if (!hasAuthToken && !loginInProgress) {
-            console.log('❌ No user and no auth token - need to redirect');
-            startAuthCheck();
-          } else {
-            console.log('⏳ Auth callback or login in progress - waiting...');
-            startAuthCheck();
-          }
-        });
-        
-        // Enhanced error handling
-        netlifyIdentity.on('error', (err) => {
-          console.error('🚨 Netlify Identity Error:', err);
-          loginInProgress = false;
-        });
-        
-        // Mobile-specific events
-        netlifyIdentity.on('open', () => {
-          console.log('📱 Login popup opened');
-          loginInProgress = true;
-        });
-        
-        netlifyIdentity.on('close', () => {
-          console.log('📱 Login popup closed');
-          setTimeout(() => {
-            if (!currentUser && !loginInProgress) {
-              const user = netlifyIdentity.currentUser();
-              if (user) {
-                console.log('✅ User found after popup close');
-                currentUser = user;
-                authCheckComplete = true;
-              }
-            }
-          }, 1000);
-        });
-        
-        // Initialize
-        netlifyIdentity.init();
-        
-      } else {
-        console.log('❌ Netlify Identity not available');
-        currentUser = { id: 'test-user', email: 'test@example.com' };
-        authCheckComplete = true;
-      }
-      
-      // Auth checking with mobile-optimized timing
-      function startAuthCheck() {
-        if (authCheckComplete) {
-          console.log('✅ Auth already complete');
-          return;
-        }
-        
-        const baseDelay = isMobile ? 3000 : 2000;
-        const authDelay = hasAuthToken ? baseDelay * 2 : baseDelay;
-        
-        console.log(`⏰ Starting auth check in ${authDelay}ms...`);
-        
-        setTimeout(() => {
-          performAuthCheck();
-        }, authDelay);
-      }
-      
-      function performAuthCheck() {
-        if (authCheckComplete || currentUser) {
-          console.log('✅ Auth complete or user found - skipping check');
-          return;
-        }
-        
-        console.log('🔍 Performing auth check...');
-        const user = netlifyIdentity.currentUser();
-        
-        if (user) {
-          console.log('✅ User found in auth check:', user.email);
-          currentUser = user;
-          authCheckComplete = true;
-        } else if (hasAuthToken && !authCheckComplete) {
-          console.log('⏳ Auth token present but no user yet - waiting longer...');
-          setTimeout(() => {
-            const retryUser = netlifyIdentity.currentUser();
-            if (retryUser) {
-              console.log('✅ User found on retry:', retryUser.email);
-              currentUser = retryUser;
-              authCheckComplete = true;
-            } else {
-              console.log('❌ Auth token failed to resolve - redirecting');
-              redirectToAuth();
-            }
-          }, 3000);
-        } else {
-          console.log('❌ No user found - redirecting to auth');
-          redirectToAuth();
-        }
-      }
-      
-      function redirectToAuth() {
-        if (!authCheckComplete && !currentUser && !loginInProgress) {
-          console.log('🔄 Redirecting to auth page...');
-          window.location.href = '/auth.html';
-        }
-      }
-      
-      // App variables
       const steps = [
-        "Front bumper", "Driver side front fender", "Driver side front wheel",
-        "Driver side doors", "Driver side rear wheel", "Driver side rear fender",
-        "Rear bumper", "Passenger side rear fender", "Passenger side rear wheel", 
-        "Passenger side doors", "Passenger side front wheel", "Passenger side front fender",
-        "Front windshield", "Interior: dashboard", "Interior: front seats",
-        "Interior: rear seats", "Odometer", "Trunk/cargo area"
+        "Front bumper",
+        "Driver side front fender", 
+        "Driver side front wheel",
+        "Driver side doors",
+        "Driver side rear wheel",
+        "Driver side rear fender",
+        "Rear bumper",
+        "Passenger side rear fender",
+        "Passenger side rear wheel", 
+        "Passenger side doors",
+        "Passenger side front wheel",
+        "Passenger side front fender",
+        "Front windshield",
+        "Interior: dashboard",
+        "Interior: front seats",
+        "Interior: rear seats",
+        "Odometer",
+        "Trunk/cargo area",
       ];
 
+      let currentStep = -1; // -1 = license plate step, 0-17 = inspection steps
+      let recordedBlob = null;
+      let vehicleInfo = null;
+      let detectedVehicle = null;
+      let inspectionStarted = false;
+      let uploadedVideoUrls = [];
+      let isTestMode = false;
+      let userVehicles = [];
+      let currentVehicleId = null;
+
+      // Test folder photos
       const testFolderPhotos = [
         "https://pub-e59be5da606246259e1876310327852e.r2.dev/rental-shield/test-data/front-bumper.jpg",
         "https://pub-e59be5da606246259e1876310327852e.r2.dev/rental-shield/test-data/front-left-fender.jpg",
@@ -574,20 +334,10 @@
         "https://pub-e59be5da606246259e1876310327852e.r2.dev/rental-shield/test-data/front-seats.jpg",
         "https://pub-e59be5da606246259e1876310327852e.r2.dev/rental-shield/test-data/rear-seats.jpg",
         "https://pub-e59be5da606246259e1876310327852e.r2.dev/rental-shield/test-data/odometer.jpg",
-        "https://pub-e59be5da606246259e1876310327852e.r2.dev/rental-shield/test-data/trunk.jpg"
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/rental-shield/test-data/trunk.jpg",
       ];
 
-      let currentStep = -1;
-      let recordedBlob = null;
-      let vehicleInfo = null;
-      let detectedVehicle = null;
-      let inspectionStarted = false;
-      let uploadedVideoUrls = [];
-      let isTestMode = false;
-      let userVehicles = [];
-      let currentVehicleId = null;
-
-      // Get DOM elements
+      // Get elements
       const video = document.getElementById("video");
       const statusBar = document.getElementById("status-bar");
       const stepInstruction = document.getElementById("step-instruction");
@@ -598,63 +348,54 @@
       const testModeBtn = document.getElementById("test-mode-btn");
       const flashEffect = document.getElementById("flash-effect");
 
-      console.log('🎛️ DOM elements loaded:', {
-        video: !!video,
+      console.log('Elements found:', {
         startInspectionBtn: !!startInspectionBtn,
         testModeBtn: !!testModeBtn,
         photoButton: !!photoButton,
         nextButton: !!nextButton
       });
 
-      // Mobile-optimized camera
+      // Start camera
       async function startCamera() {
         try {
-          console.log('📹 Requesting camera access...');
-          
-          const constraints = {
+          console.log('Requesting camera...');
+          const stream = await navigator.mediaDevices.getUserMedia({
             video: {
               facingMode: "environment",
-              width: { ideal: isMobile ? 1280 : 1920, max: 1920 },
-              height: { ideal: isMobile ? 720 : 1080, max: 1080 },
-              frameRate: { ideal: 30 }
+              width: { ideal: 1280, max: 1280 },
+              height: { ideal: 720, max: 720 },
+              frameRate: { ideal: 30 },
             },
-            audio: false
-          };
-          
-          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            audio: false,
+          });
           video.srcObject = stream;
-          
-          video.onloadedmetadata = () => {
-            console.log('📹 Camera ready:', video.videoWidth + 'x' + video.videoHeight);
-          };
-          
-          console.log('✅ Camera started successfully');
-          
-        } catch (error) {
-          console.error('❌ Camera error:', error);
-          
-          // Try fallback constraints
+          console.log("Camera started successfully");
+        } catch (e) {
           try {
-            console.log('📹 Trying fallback camera settings...');
-            const fallbackStream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: "environment" },
-              audio: false
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: "environment",
+                width: { ideal: 1024, max: 1024 },
+                height: { ideal: 576, max: 576 },
+                frameRate: { ideal: 30 },
+              },
+              audio: false,
             });
-            video.srcObject = fallbackStream;
-            console.log('✅ Camera started with fallback');
-          } catch (fallbackError) {
-            console.error('❌ Camera fallback failed:', fallbackError);
-            statusBar.textContent = "📷 Camera access required - please enable in browser settings";
-            statusBar.style.display = "block";
+            video.srcObject = stream;
+            console.log("Camera started with fallback settings");
+          } catch (e2) {
+            console.log("Camera not available:", e2);
+            video.style.display = 'none';
           }
         }
       }
 
-      // Vehicle UUID generation
+      // Generate vehicle UUID
       function generateVehicleUUID() {
         return `veh-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       }
 
+      // Find existing vehicle in user's fleet
       function findUserVehicle(vehicleData) {
         return userVehicles.find(v => 
           v.plate.toLowerCase() === vehicleData.plate.toLowerCase() &&
@@ -663,6 +404,7 @@
         );
       }
 
+      // Generate inspection ID
       function generateInspectionId() {
         const date = new Date().toISOString().split('T')[0];
         const time = Date.now();
@@ -673,12 +415,12 @@
       async function loadUserVehicles() {
         try {
           if (!currentUser) {
-            console.log('❌ No user for vehicle loading');
+            console.log('No user logged in, skipping vehicle load');
             userVehicles = [];
             return;
           }
           
-          console.log('📂 Loading user vehicles...');
+          console.log('Loading user vehicles...');
           const response = await fetch('/.netlify/functions/get-user-vehicles', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -691,75 +433,21 @@
           if (response.ok) {
             const data = await response.json();
             userVehicles = data.vehicles || [];
-            console.log('✅ Loaded vehicles:', userVehicles.length);
+            console.log('Loaded user vehicles:', userVehicles);
           }
         } catch (error) {
-          console.log("⚠️ Couldn't load user vehicles:", error);
+          console.log("Couldn't load user vehicles:", error);
           userVehicles = [];
-        }
-      }
-
-      // Ensure user folder exists
-      async function ensureUserFolder() {
-        try {
-          if (!currentUser?.id) return;
-
-          console.log('📁 Ensuring user folder exists...');
-          
-          const response = await fetch('/.netlify/functions/create-user-folder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: currentUser.id,
-              userEmail: currentUser.email,
-              folderPath: `rental-shield/users/${currentUser.id}/`,
-              createSubfolders: ['vehicles', 'profile']
-            })
-          });
-
-          if (response.ok) {
-            console.log('✅ User folder ready');
-          }
-        } catch (error) {
-          console.error('⚠️ User folder creation failed:', error);
-        }
-      }
-
-      // Ensure vehicle folder exists
-      async function ensureVehicleFolder() {
-        try {
-          if (!currentUser || !currentVehicleId || !vehicleInfo) return;
-
-          console.log('🚗 Creating vehicle folder...');
-          
-          const response = await fetch('/.netlify/functions/create-vehicle-folder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: currentUser.id,
-              vehicleUUID: currentVehicleId,
-              vehicleData: vehicleInfo,
-              folderPath: `rental-shield/users/${currentUser.id}/vehicles/${currentVehicleId}/`,
-              createSubfolders: ['inspections']
-            })
-          });
-
-          if (response.ok) {
-            console.log('✅ Vehicle folder ready');
-          }
-        } catch (error) {
-          console.error('⚠️ Vehicle folder creation failed:', error);
         }
       }
 
       // Start inspection
       async function startInspection() {
-        console.log('🚀 Starting inspection...');
+        console.log('Starting inspection...');
         isTestMode = false;
         inspectionStarted = true;
         
         await loadUserVehicles();
-        await ensureUserFolder();
         
         startScreen.style.display = "none";
         statusBar.style.display = "block";
@@ -767,53 +455,60 @@
         photoButton.style.display = "block";
         nextButton.style.display = "block";
         
-        currentStep = -1;
+        currentStep = -1; // Start with license plate
         updateStep();
       }
 
       // Test mode
       async function startTestMode() {
-        console.log('🧪 Starting test mode...');
+        console.log('Starting test mode...');
         isTestMode = true;
         inspectionStarted = true;
         startScreen.style.display = "none";
         statusBar.style.display = "block";
         stepInstruction.style.display = "block";
         
-        statusBar.textContent = "🧪 Creating test data...";
-        stepInstruction.textContent = "🧪 TEST MODE: Auto-sending test photos...";
+        statusBar.textContent = "🧪 Creating test data from folder...";
+        stepInstruction.textContent = "🧪 TEST MODE: Auto-sending test folder photos...";
 
+        // Create test vehicle data
         detectedVehicle = {
-          make: "Toyota", model: "Camry", year: "2023",
-          color: "Silver", plate: "TEST123", confidence: 0.95
+          make: "Toyota",
+          model: "Camry",
+          year: "2023",
+          color: "Silver",
+          plate: "TEST123",
+          confidence: 0.95
         };
         vehicleInfo = detectedVehicle;
         currentVehicleId = "veh-test123";
 
+        // Create test data with photos from test folder
         uploadedVideoUrls = [];
         const testInspectionId = generateInspectionId();
         
         for (let i = 0; i < steps.length; i++) {
           uploadedVideoUrls.push({
-            step: i + 1, stepName: steps[i],
+            step: i + 1,
+            stepName: steps[i],
             url: testFolderPhotos[i] || testFolderPhotos[0],
-            type: "photo", timestamp: new Date().toISOString(),
+            type: "photo",
+            timestamp: new Date().toISOString(),
             fileSize: Math.floor(Math.random() * 150 + 100) + " KB",
-            vehicleId: currentVehicleId, inspectionId: testInspectionId,
-            filePath: `rental-shield/users/test-user/vehicles/${currentVehicleId}/inspections/${testInspectionId}/step-${i + 1}.jpg`
+            vehicleId: currentVehicleId,
+            inspectionId: testInspectionId,
+            filePath: `rental-shield/users/test-user/vehicles/${currentVehicleId}/inspections/${testInspectionId}/step-${i + 1}-${steps[i].replace(/\s+/g, '-').toLowerCase()}.jpg`
           });
         }
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        statusBar.textContent = "🧪 Test data ready! Triggering webhook...";
+        stepInstruction.textContent = "🧪 TEST MODE: Sending 18 test photos to AI analysis...";
+
         await triggerInspectionComplete();
       }
 
-      // Update step display
-      function updateStep() {
-        if (currentStep === -1) {
-          stepInstruction.textContent = "📋 Step 0: Take a clear photo of your license plate";
-          statusBar.textContent = "📸 License plate detection - Make sure plate is clearly visible";
-        } else {
       // Update step display
       function updateStep() {
         if (currentStep === -1) {
@@ -833,14 +528,17 @@
 
       // Capture photo
       function capturePhoto() {
-        console.log('📸 Capturing photo...');
+        console.log('Capturing photo...');
         
+        // Flash effect
         flashEffect.classList.add("active");
-        setTimeout(() => flashEffect.classList.remove("active"), 150);
+        setTimeout(() => flashEffect.classList.remove("active"), 100);
 
         if (currentStep === -1) {
+          // License plate step - silent detection
           detectLicensePlate();
         } else {
+          // Regular inspection photo - upload to R2
           uploadToR2();
         }
       }
@@ -850,17 +548,20 @@
         try {
           statusBar.textContent = "🔍 Analyzing license plate...";
           
+          // Create a canvas to get image data
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           canvas.width = video.videoWidth || 640;
           canvas.height = video.videoHeight || 480;
           ctx.drawImage(video, 0, 0);
           
+          // Convert to base64
           const imageData = canvas.toDataURL('image/jpeg', 0.8);
           const base64 = imageData.split(',')[1];
           
-          console.log('🤖 Calling vehicle detection API...');
+          console.log('Calling vehicle detection API...');
           
+          // Call your Netlify function with user context
           const response = await fetch('/.netlify/functions/detect-vehicle', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -873,44 +574,52 @@
           });
           
           const result = await response.json();
-          console.log('🤖 Detection result:', result);
+          console.log('Detection result:', result);
           
+          // Process result silently - only show popup if vehicle detected
           if (result.success && result.vehicle && result.vehicle.plate) {
+            // AI successfully detected vehicle info
             statusBar.textContent = "✅ Vehicle detected - confirming details...";
             
+            // Check if this user already has this vehicle in their fleet
             const existingVehicle = findUserVehicle(result.vehicle);
             
             if (existingVehicle) {
+              // User already has this vehicle - add to existing vehicle
               result.vehicle.vehicleUUID = existingVehicle.vehicleUUID;
               result.vehicle.inspectionHistory = existingVehicle.inspectionHistory || [];
               showVehicleConfirmation(result.vehicle, true);
             } else {
+              // New vehicle for this user - will create new vehicle UUID
               result.vehicle.vehicleUUID = generateVehicleUUID();
               result.vehicle.inspectionHistory = [];
               showVehicleConfirmation(result.vehicle, false);
             }
           } else {
-            console.log('❌ No clear vehicle detection');
+            // AI couldn't detect vehicle clearly - proceed silently or show manual entry
+            console.log('No clear vehicle detection, proceeding with manual entry');
             statusBar.textContent = "⚠️ Could not detect vehicle details - manual entry required";
             
+            // Small delay then show manual entry
             setTimeout(() => {
               showManualVehicleEntry();
             }, 1500);
           }
           
         } catch (error) {
-          console.error('❌ License plate detection error:', error);
+          console.error('License plate detection error:', error);
           statusBar.textContent = "⚠️ Detection failed - manual entry required";
           
+          // Show manual entry after error
           setTimeout(() => {
             showManualVehicleEntry();
           }, 1500);
         }
       }
 
-      // Show vehicle confirmation popup
+      // Show vehicle confirmation popup for user's fleet
       function showVehicleConfirmation(vehicleData, isExistingInFleet) {
-        console.log('🚗 Showing vehicle confirmation:', vehicleData);
+        console.log('Showing vehicle confirmation:', vehicleData);
         
         const popup = document.createElement('div');
         popup.className = 'vehicle-popup';
@@ -928,15 +637,13 @@
         }
         
         popup.innerHTML = `
-          <div class="vehicle-popup-content">
-            <h3>${isExistingInFleet ? '🚗 Is this your vehicle?' : '🆕 New vehicle detected'}</h3>
-            <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
-            <p>${vehicleData.color} • ${vehicleData.plate}</p>
-            ${historyText}
-            <div class="popup-buttons">
-              <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">✅ Yes</button>
-              <button class="popup-btn btn-no" onclick="confirmVehicle(false)">❌ No</button>
-            </div>
+          <h3>${isExistingInFleet ? '🚗 Is this your vehicle?' : '🆕 New vehicle detected'}</h3>
+          <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
+          <p>${vehicleData.color} • ${vehicleData.plate}</p>
+          ${historyText}
+          <div class="popup-buttons">
+            <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">✅ Yes</button>
+            <button class="popup-btn btn-no" onclick="confirmVehicle(false)">❌ No</button>
           </div>
         `;
         
@@ -946,63 +653,59 @@
 
       // Show manual vehicle entry
       function showManualVehicleEntry() {
-        console.log('📝 Showing manual vehicle entry');
+        console.log('Showing manual vehicle entry');
         
         const popup = document.createElement('div');
         popup.className = 'vehicle-popup';
         popup.id = 'manual-vehicle-entry';
         popup.innerHTML = `
-          <div class="vehicle-popup-content">
-            <h3>📝 Enter Vehicle Details</h3>
-            <div class="manual-form">
-              <div class="form-row">
-                <div>
-                  <label>Make</label>
-                  <input type="text" id="manual-make" placeholder="Toyota" required>
-                </div>
-                <div>
-                  <label>Model</label>
-                  <input type="text" id="manual-model" placeholder="Camry" required>
-                </div>
+          <h3>📝 Enter Vehicle Details</h3>
+          <div class="manual-form">
+            <div class="form-row">
+              <div>
+                <label>Make</label>
+                <input type="text" id="manual-make" placeholder="Toyota" required>
               </div>
-              <div class="form-row">
-                <div>
-                  <label>Year</label>
-                  <input type="number" id="manual-year" min="1990" max="2025" placeholder="2023" required>
-                </div>
-                <div>
-                  <label>Color</label>
-                  <input type="text" id="manual-color" placeholder="Silver" required>
-                </div>
-              </div>
-              <div class="form-row">
-                <div style="flex: 1;">
-                  <label>License Plate</label>
-                  <input type="text" id="manual-plate" placeholder="ABC123" required>
-                </div>
+              <div>
+                <label>Model</label>
+                <input type="text" id="manual-model" placeholder="Camry" required>
               </div>
             </div>
-            <div class="popup-buttons">
-              <button class="popup-btn btn-yes" onclick="saveManualVehicle()">💾 Save & Continue</button>
+            <div class="form-row">
+              <div>
+                <label>Year</label>
+                <input type="number" id="manual-year" min="1990" max="2025" placeholder="2023" required>
+              </div>
+              <div>
+                <label>Color</label>
+                <input type="text" id="manual-color" placeholder="Silver" required>
+              </div>
             </div>
+            <div class="form-row">
+              <div style="flex: 1;">
+                <label>License Plate</label>
+                <input type="text" id="manual-plate" placeholder="ABC123" required>
+              </div>
+            </div>
+          </div>
+          <div class="popup-buttons">
+            <button class="popup-btn btn-yes" onclick="saveManualVehicle()">💾 Save & Continue</button>
           </div>
         `;
         
         document.body.appendChild(popup);
       }
 
-      // Global popup functions
+      // Global functions for popup interactions
       window.confirmVehicle = async function(confirmed) {
-        console.log('🚗 Vehicle confirmation:', confirmed);
+        console.log('Vehicle confirmation:', confirmed);
         const popup = document.getElementById('vehicle-confirmation');
         if (popup) popup.remove();
         
         if (confirmed) {
           vehicleInfo = detectedVehicle;
           currentVehicleId = detectedVehicle.vehicleUUID;
-          console.log('✅ Using vehicle UUID:', currentVehicleId);
-          
-          await ensureVehicleFolder();
+          console.log('Using vehicle UUID:', currentVehicleId);
           
           statusBar.textContent = "✅ Vehicle confirmed - ready for inspection";
           currentStep = 0;
@@ -1014,7 +717,7 @@
       };
 
       window.saveManualVehicle = async function() {
-        console.log('💾 Saving manual vehicle...');
+        console.log('Saving manual vehicle...');
         const make = document.getElementById('manual-make').value.trim();
         const model = document.getElementById('manual-model').value.trim();
         const year = document.getElementById('manual-year').value.trim();
@@ -1030,12 +733,10 @@
         detectedVehicle.vehicleUUID = generateVehicleUUID();
         vehicleInfo = detectedVehicle;
         currentVehicleId = detectedVehicle.vehicleUUID;
-        console.log('✅ Created new vehicle UUID:', currentVehicleId);
+        console.log('Created new vehicle UUID:', currentVehicleId);
         
         const popup = document.getElementById('manual-vehicle-entry');
         if (popup) popup.remove();
-        
-        await ensureVehicleFolder();
         
         statusBar.textContent = "✅ Vehicle details saved - ready for inspection";
         currentStep = 0;
@@ -1043,36 +744,42 @@
         nextButton.disabled = false;
       };
 
-      // Upload to R2
+      // Upload to R2 function with new structure
       async function uploadToR2() {
         try {
           statusBar.textContent = "📤 Uploading photo...";
           
+          // Create a canvas to get image data
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           canvas.width = video.videoWidth || 640;
           canvas.height = video.videoHeight || 480;
           ctx.drawImage(video, 0, 0);
           
+          // Convert to blob
           canvas.toBlob(async (blob) => {
             if (!blob) {
               statusBar.textContent = "❌ Failed to capture photo";
               return;
             }
             
+            // Create new hierarchical file path
             const userId = currentUser?.id || 'anonymous';
             const vehicleId = currentVehicleId || 'unknown-vehicle';
             const inspectionId = generateInspectionId();
             
             let fileName;
             if (currentStep === -1) {
+              // License plate photo
               fileName = `rental-shield/users/${userId}/vehicles/${vehicleId}/inspections/${inspectionId}/license-plate.jpg`;
             } else {
+              // Inspection step photo
               fileName = `rental-shield/users/${userId}/vehicles/${vehicleId}/inspections/${inspectionId}/step-${currentStep + 1}-${steps[currentStep].replace(/\s+/g, '-').toLowerCase()}.jpg`;
             }
 
-            console.log('📤 Uploading to:', fileName);
+            console.log('Uploading to new structure:', fileName);
 
+            // Try to upload to R2
             try {
               const formData = new FormData();
               formData.append('file', blob, fileName);
@@ -1097,6 +804,7 @@
                 const result = await response.json();
                 const uploadUrl = result.url;
                 
+                // Track the uploaded file with new structure info
                 if (currentStep >= 0) {
                   const fileInfo = {
                     step: currentStep + 1,
@@ -1115,19 +823,19 @@
 
                 statusBar.textContent = `✅ Photo uploaded! (${Math.round(blob.size / 1024)} KB)`;
                 nextButton.disabled = false;
-                console.log('✅ Upload successful:', uploadUrl);
+                console.log('Upload successful:', uploadUrl);
               } else {
                 throw new Error(`Upload failed: ${response.status}`);
               }
             } catch (uploadError) {
-              console.error('❌ R2 upload failed:', uploadError);
-              statusBar.textContent = "⚠️ Upload failed - continuing anyway";
+              console.error('R2 upload failed:', uploadError);
+              statusBar.textContent = "⚠️ R2 upload failed - continuing anyway";
               nextButton.disabled = false;
             }
           }, 'image/jpeg', 0.8);
           
         } catch (error) {
-          console.error('❌ Upload error:', error);
+          console.error('Upload error:', error);
           statusBar.textContent = "⚠️ Upload error - continuing anyway";
           nextButton.disabled = false;
         }
@@ -1135,7 +843,7 @@
 
       // Next step
       function nextStep() {
-        console.log('▶️ Next step...');
+        console.log('Next step...');
         if (currentStep < steps.length - 1) {
           currentStep++;
           updateStep();
@@ -1149,7 +857,7 @@
         }
       }
 
-      // Trigger inspection completion
+      // Trigger inspection completion webhook with enhanced data
       async function triggerInspectionComplete() {
         const inspectionId = uploadedVideoUrls[0]?.inspectionId || generateInspectionId();
         const completionData = {
@@ -1187,7 +895,8 @@
         try {
           const webhookUrl = "https://hamzaw.app.n8n.cloud/webhook-test/50903630-1eac-46a7-a041-6b5614e9f533";
 
-          console.log("🚀 Triggering completion webhook...");
+          console.log("🚀 Triggering inspection completion webhook...");
+          console.log("Completion data:", completionData);
 
           const response = await fetch(webhookUrl, {
             method: "POST",
@@ -1203,6 +912,7 @@
             statusBar.textContent = "Processing complete - AI analysis started! 🤖";
             console.log("✅ Webhook sent successfully!");
 
+            // Update user's vehicle list if this was a new vehicle
             if (!userVehicles.find(v => v.vehicleId === currentVehicleId)) {
               userVehicles.push({
                 vehicleId: currentVehicleId,
@@ -1214,13 +924,13 @@
             throw new Error(`Webhook failed: ${response.status}`);
           }
         } catch (error) {
-          console.error("❌ Webhook failed:", error);
+          console.error("Webhook trigger failed:", error);
           stepInstruction.textContent = "⚠️ Analysis trigger failed - inspection data saved locally";
           statusBar.textContent = "Inspection complete - please contact support if needed";
         }
       }
 
-      // Lighting check
+      // Lighting check function
       function checkLighting() {
         if (!inspectionStarted || video.readyState < 2) return;
 
@@ -1252,6 +962,12 @@
           } else if (!statusBar.textContent.includes("✅") && !statusBar.textContent.includes("📤")) {
             statusBar.textContent = `Lighting: ${lightOK ? "🟢 Good" : "🟡 Check"} | Ready for photo`;
           }
+        } else {
+          if (currentStep === -1) {
+            statusBar.textContent = "📷 License plate detection ready";
+          } else if (!statusBar.textContent.includes("✅") && !statusBar.textContent.includes("📤")) {
+            statusBar.textContent = "📷 Ready for photo";
+          }
         }
       }
 
@@ -1262,30 +978,30 @@
 
       // Event listeners
       startInspectionBtn.addEventListener("click", function() {
-        console.log('🚀 Start button clicked');
+        console.log('Start button clicked!');
         startInspection();
       });
 
       testModeBtn.addEventListener("click", function() {
-        console.log('🧪 Test button clicked');
+        console.log('Test button clicked!');
         startTestMode();
       });
 
       photoButton.addEventListener("click", function() {
-        console.log('📸 Photo button clicked');
+        console.log('Photo button clicked!');
         capturePhoto();
       });
 
       nextButton.addEventListener("click", function() {
-        console.log('▶️ Next button clicked');
+        console.log('Next button clicked!');
         nextStep();
       });
 
-      // Initialize app
-      console.log('🎬 Initializing camera and lighting detection...');
+      // Initialize
+      console.log('Setting up camera...');
       startCamera();
       loopStatus();
-      console.log('✅ App setup complete!');
+      console.log('Setup complete!');
     </script>
     
     <script>
