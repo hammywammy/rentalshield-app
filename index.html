@@ -294,19 +294,34 @@
     <script>
       console.log('Script starting...');
       
-      // Simple authentication setup
+      // Authentication setup with delay
       let currentUser = null;
+      let authChecked = false;
       
       // Check for authentication when page loads
       if (window.netlifyIdentity) {
         netlifyIdentity.on('init', user => {
+          console.log('Netlify Identity initialized');
+          
+          // Wait a moment for any pending login to complete
+          setTimeout(() => {
+            currentUser = netlifyIdentity.currentUser();
+            authChecked = true;
+            
+            if (currentUser) {
+              console.log('User authenticated:', currentUser.email);
+            } else {
+              console.log('No user found - redirecting to auth');
+              window.location.href = '/auth.html';
+            }
+          }, 2000); // 2 second delay to let login complete
+        });
+        
+        // Handle successful login
+        netlifyIdentity.on('login', user => {
+          console.log('Login successful:', user.email);
           currentUser = user;
-          if (user) {
-            console.log('User authenticated:', user.email);
-          } else {
-            console.log('No user - redirecting to auth');
-            window.location.href = '/auth.html';
-          }
+          // Stay on current page after login
         });
         
         netlifyIdentity.init();
