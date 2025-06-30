@@ -238,8 +238,56 @@
       });
 
       function initializeApp() {
+          console.log('Initializing app...');
           startCamera();
           loopStatus();
+          setupEventListeners();
+      }
+
+      // Setup event listeners
+      function setupEventListeners() {
+        console.log('Setting up event listeners...');
+        
+        // Start inspection event listeners
+        document.getElementById('start-inspection-btn').addEventListener("click", async () => {
+          console.log('Start inspection clicked');
+          isTestMode = false;
+          await loadUserVehicles();
+          startInspection();
+        });
+
+        document.getElementById('test-mode-btn').addEventListener("click", async () => {
+          console.log('Test mode clicked');
+          isTestMode = true;
+          await autoSendTestPhotos();
+        });
+
+        // Photo and next button listeners
+        document.getElementById('photo-button').addEventListener("click", () => {
+          console.log('Photo button clicked');
+          if (isTestMode) {
+            handleTestUpload();
+          } else {
+            capturePhoto();
+          }
+        });
+
+        document.getElementById('next-button').addEventListener("click", async () => {
+          console.log('Next button clicked');
+          if (currentStep < steps.length - 1) {
+            currentStep++;
+            updateStep();
+          } else {
+            const vehicleText = vehicleInfo.make ? 
+              `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}` : 
+              "Vehicle";
+            stepInstruction.textContent = `🎉 ${vehicleText} inspection completed! Processing...`;
+            nextButton.style.display = "none";
+            photoButton.style.display = "none";
+
+            await triggerInspectionComplete();
+          }
+        });
       }
 
       netlifyIdentity.init();
@@ -382,20 +430,11 @@
         }
       }
 
-      // Start inspection event listeners
-      startInspectionBtn.addEventListener("click", async () => {
-        isTestMode = false;
-        await loadUserVehicles();
-        startInspection();
-      });
-
-      testModeBtn.addEventListener("click", async () => {
-        isTestMode = true;
-        await autoSendTestPhotos();
-      });
+      // Start inspection event listeners - REMOVED (now in setupEventListeners)
 
       // Start inspection
       function startInspection() {
+        console.log('Starting inspection...');
         inspectionStarted = true;
         startScreen.style.display = "none";
         statusBar.style.display = "block";
@@ -497,30 +536,7 @@
         requestAnimationFrame(loopStatus);
       }
 
-      // Event listeners
-      photoButton.addEventListener("click", () => {
-        if (isTestMode) {
-          handleTestUpload();
-        } else {
-          capturePhoto();
-        }
-      });
-
-      nextButton.addEventListener("click", async () => {
-        if (currentStep < steps.length - 1) {
-          currentStep++;
-          updateStep();
-        } else {
-          const vehicleText = vehicleInfo.make ? 
-            `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}` : 
-            "Vehicle";
-          stepInstruction.textContent = `🎉 ${vehicleText} inspection completed! Processing...`;
-          nextButton.style.display = "none";
-          photoButton.style.display = "none";
-
-          await triggerInspectionComplete();
-        }
-      });
+      // Event listeners - REMOVED (now in setupEventListeners)
 
       // Test mode upload handler
       async function handleTestUpload() {
@@ -541,11 +557,7 @@
         proceedToNextStep();
       }
 
-      // Initialize app
-      window.addEventListener('load', () => {
-        startCamera();
-        loopStatus();
-      });
+      // Initialize app - REMOVED (now handled by auth script)
     </script>
     
     <script>
