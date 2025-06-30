@@ -294,25 +294,60 @@
     <script>
       console.log('Script starting...');
       
-      // Authentication setup
+      // Authentication setup with proper initialization
       let currentUser = null;
+      let authInitialized = false;
       
       // Check for authentication when page loads
       if (window.netlifyIdentity) {
         netlifyIdentity.on('init', user => {
+          authInitialized = true;
           if (user) {
             currentUser = user;
             console.log('User authenticated:', user.email);
+            // User is logged in, initialize the app
+            initializeApp();
           } else {
             console.log('No user authenticated - redirecting to login');
-            window.location.href = '/auth.html';
+            // Small delay to ensure we're not interrupting a login process
+            setTimeout(() => {
+              if (!currentUser) {
+                window.location.href = '/auth.html';
+              }
+            }, 1000);
           }
+        });
+
+        netlifyIdentity.on('login', user => {
+          console.log('User logged in:', user.email);
+          currentUser = user;
+          // Redirect to main app after successful login
+          window.location.href = '/';
+        });
+
+        netlifyIdentity.on('logout', () => {
+          console.log('User logged out');
+          currentUser = null;
+          window.location.href = '/auth.html';
         });
         
         netlifyIdentity.init();
       } else {
         console.log('Netlify Identity not available - redirecting to login');
-        window.location.href = '/auth.html';
+        setTimeout(() => {
+          window.location.href = '/auth.html';
+        }, 1000);
+      }
+
+      // Initialize app only after authentication is confirmed
+      function initializeApp() {
+        if (!authInitialized || !currentUser) {
+          console.log('Waiting for authentication...');
+          return;
+        }
+        
+        console.log('Initializing app for authenticated user...');
+        // App initialization code here
       }
       
       const steps = [
@@ -1118,15 +1153,10 @@
         nextStep();
       });
 
-      // Initialize
+      // Initialize camera and app (moved from bottom)
       console.log('Setting up camera...');
-      
-      // Start camera immediately when page loads
       startCamera();
-      
-      // Start lighting detection loop
       loopStatus();
-      
       console.log('Setup complete!');
 
       // Lighting check function
