@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Car Inspection Recorder - Photo Only</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        background: black;
+      }
+      video {
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+      }
+      #vehicle-info {
+        position: fixed;
+        top: 2rem;
+        left: 1rem;
+        right: 1rem;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        text-align: center;
+        z-index: 10;
+        font-size: 1.2rem;
+      }
+      #vehicle-input {
+        width: 100%;
+        padding: 0.5rem;
+        font-size: 1rem;
+        border-radius: 0.5rem;
+        border: none;
+        margin-bottom: 0.5rem;
+      }
+      #start-inspection {
+        padding: 0.5rem 1rem;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      #status-bar {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        right: 1rem;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        padding: 1rem;
+        font-size: 1.2rem;
+        border-radius: 0.75rem;
+        text-align: center;
+        z-index: 10;
+        user-select: none;
+        display: none;
+      }
+      #step-instruction {
+        position: fixed;
+        bottom: 8rem;
+        left: 1rem;
+        right: 1rem;
+        margin: 0 auto;
+        background: rgba(0, 0, 0, 0.75);
+        color: white;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        font-size: 1.5rem;
+        text-align: center;
+        z-index: 10;
+        line-height: 1.4;
+        user-select: none;
+        box-sizing: border-box;
+        word-wrap: break-word;
+        display: none;
+      }
+      #photo-button,
+      #next-button {
+        position: fixed;
+        bottom: 1.5rem;
+        padding: 0.8rem 1.6rem;
+        font-size: 1.5rem;
+        border-radius: 1rem;
+        border: none;
+        color: white;
+        cursor: pointer;
+        z-index: 10;
+        user-select: none;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+        transition: background-color 0.3s, opacity 0.3s;
+        display: none;
+      }
+      #photo-button {
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #2196f3;
+        font-size: 1.8rem;
+        padding: 1rem 2rem;
+      }
+      #next-button {
+        right: 1rem;
+        background-color: #4caf50;
+      }
+      #next-button:disabled {
+        background-color: #888;
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .flash-effect {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        z-index: 20;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.1s;
+      }
+      .flash-effect.active {
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <video id="video" autoplay muted playsinline></video>
+
+    <!-- Camera flash effect -->
+    <div id="flash-effect" class="flash-effect"></div>
+
+    <!-- Vehicle Info Input -->
+    <div id="vehicle-info">
+      <div style="margin-bottom: 0.5rem; font-weight: bold">
+        Enter Vehicle Information
+      </div>
+      <input
+        type="text"
+        id="vehicle-input"
+        placeholder="e.g., Chevy Silverado 2023 (or type TEST for demo)"
+      />
+      <button id="start-inspection">Start Inspection</button>
+    </div>
+
+    <!-- Status and Controls -->
+    <div id="status-bar">Lighting: ...</div>
+    <div id="step-instruction">Loading steps...</div>
+    <button id="photo-button">📸 Take Photo</button>
+    <button id="next-button" disabled>Next Step</button>
+
+    <script>
+      const steps = [
+        "Front bumper",
+        "Driver side front fender",
+        "Driver side front wheel",
+        "Driver side doors",
+        "Driver side rear wheel",
+        "Driver side rear fender",
+        "Rear bumper",
+        "Passenger side rear fender",
+        "Passenger side rear wheel",
+        "Passenger side doors",
+        "Passenger side front wheel",
+        "Passenger side front fender",
+        "Front windshield",
+        "Interior: dashboard",
+        "Interior: front seats",
+        "Interior: rear seats",
+        "Odometer",
+        "Trunk/cargo area",
+      ];
+
+      // Test folder photos - your R2 bucket URLs
+      const testFolderPhotos = [
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/front-bumper.jpg", // Front bumper
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/front-left-fender.jpg", // Driver side front fender
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/front-left-wheel.jpg", // Driver side front wheel
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/left-side-doors.jpg", // Driver side doors
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/rear-left-wheel.jpg", // Driver side rear wheel
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/rear-left-fender.jpg", // Driver side rear fender
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/rear-bumper.jpg", // Rear bumper
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/rear-right-fender.jpg", // Passenger side rear fender
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/rear-right-wheel.jpg", // Passenger side rear wheel
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/right-side-doors.jpg", // Passenger side doors
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/front-right-wheel.jpg", // Passenger side front wheel
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/front-right-fender.jpg", // Passenger side front fender
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/front-windshield.jpg", // Front windshield
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/dashboard.jpg", // Dashboard
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/front-seats.jpg", // Front seats
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/rear-seats.jpg", // Rear seats
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/odometer.jpg", // Odometer
+        "https://pub-e59be5da606246259e1876310327852e.r2.dev/test-videos/trunk.jpg", // Trunk
+      ];
+
+      let currentStep = 0;
+      let recordedBlob = null;
+      let vehicleInfo = null;
+      let inspectionStarted = false;
+      let uploadedVideoUrls = []; // Track all uploaded files
+      let isTestMode = false;
+
+      const video = document.getElementById("video");
+      const statusBar = document.getElementById("status-bar");
+      const stepInstruction = document.getElementById("step-instruction");
+      const nextButton = document.getElementById("next-button");
+      const photoButton = document.getElementById("photo-button");
+      const vehicleInfoDiv = document.getElementById("vehicle-info");
+      const vehicleInput = document.getElementById("vehicle-input");
+      const startInspectionBtn = document.getElementById("start-inspection");
+      const flashEffect = document.getElementById("flash-effect");
+
+      // Upload to Cloudflare R2 using Worker
+      async function uploadToR2(blob, isPhoto = true) {
+        const cleanVehicleName = vehicleInfo.replace(/[^a-zA-Z0-9]/g, "_");
+        const fileName = `${cleanVehicleName}/${cleanVehicleName}-step-${
+          currentStep + 1
+        }-${Date.now()}.jpg`;
+
+        try {
+          const formData = new FormData();
+          formData.append("file", blob, fileName);
+          formData.append("fileName", fileName);
+
+          const response = await fetch(
+            "https://uploadworker.hwmodels14.workers.dev/",
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          const result = await response.json();
+
+          if (result.success) {
+            console.log("Upload successful to R2!");
+            return result.url;
+          } else {
+            console.error("R2 upload failed:", result.error);
+            return false;
+          }
+        } catch (error) {
+          console.error("R2 upload error:", error);
+          return false;
+        }
+      }
+
+      // Start camera with optimized settings for smaller file sizes
+      async function startCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "environment",
+              width: { ideal: 1280, max: 1280 }, // Reduced from 1920
+              height: { ideal: 720, max: 720 }, // Reduced from 1080
+              frameRate: { ideal: 30 },
+            },
+            audio: false,
+          });
+          video.srcObject = stream;
+        } catch (e) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: "environment",
+                width: { ideal: 1024, max: 1024 }, // Further reduced fallback
+                height: { ideal: 576, max: 576 },
+                frameRate: { ideal: 30 },
+              },
+              audio: false,
+            });
+            video.srcObject = stream;
+          } catch (e2) {
+            console.log("Camera not available, test mode will work anyway");
+          }
+        }
+      }
+
+      // Start inspection
+      startInspectionBtn.addEventListener("click", async () => {
+        vehicleInfo = vehicleInput.value.trim();
+        if (!vehicleInfo) {
+          alert("Please enter vehicle information");
+          return;
+        }
+
+        // Check for test mode
+        isTestMode = vehicleInfo.toUpperCase() === "TEST";
+
+        if (isTestMode) {
+          vehicleInfo = "Test Vehicle 2023";
+
+          // Auto-send test folder photos immediately
+          stepInstruction.textContent =
+            "🧪 TEST MODE: Auto-sending test folder photos...";
+          stepInstruction.style.display = "block";
+          vehicleInfoDiv.style.display = "none";
+          statusBar.style.display = "block";
+          statusBar.textContent = "🧪 TEST MODE: Preparing test data...";
+
+          await autoSendTestPhotos();
+          return; // Exit early, don't show manual inspection UI
+        }
+
+        inspectionStarted = true;
+
+        vehicleInfoDiv.style.display = "none";
+        statusBar.style.display = "block";
+        stepInstruction.style.display = "block";
+        photoButton.style.display = "block";
+        nextButton.style.display = "block";
+
+        updateStep();
+      });
+
+      // Auto-send test photos from test folder
+      async function autoSendTestPhotos() {
+        statusBar.textContent = "🧪 Creating test data from folder...";
+
+        // Create test data with photos from your test folder
+        uploadedVideoUrls = [];
+        for (let i = 0; i < steps.length; i++) {
+          uploadedVideoUrls.push({
+            step: i + 1,
+            stepName: steps[i],
+            url: testFolderPhotos[i] || testFolderPhotos[0], // Use test folder photos
+            type: "photo",
+            timestamp: new Date().toISOString(),
+            fileSize: Math.floor(Math.random() * 150 + 100) + " KB", // Smaller realistic file sizes
+          });
+        }
+
+        console.log("Test folder data created:", uploadedVideoUrls);
+
+        // Small delay for visual feedback
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        statusBar.textContent = "🧪 Test data ready! Triggering webhook...";
+        stepInstruction.textContent =
+          "🧪 TEST MODE: Sending 18 test photos to AI analysis...";
+
+        // Auto-trigger the webhook with test data
+        await triggerInspectionComplete();
+
+        // Hide all buttons since we're done
+        photoButton.style.display = "none";
+        nextButton.style.display = "none";
+      }
+
+      function updateStep() {
+        stepInstruction.textContent = `${vehicleInfo} - Step ${
+          currentStep + 1
+        } of ${steps.length}: Photo — ${steps[currentStep]}`;
+        nextButton.disabled = true;
+        recordedBlob = null;
+
+        if (isTestMode) {
+          stepInstruction.textContent += ` (TEST MODE - Real photos will be used)`;
+          nextButton.disabled = false; // In test mode, allow skipping photos
+        }
+      }
+
+      // Optimized photo capture with reduced quality for smaller file sizes
+      function capturePhoto() {
+        // Flash effect
+        flashEffect.classList.add("active");
+        setTimeout(() => {
+          flashEffect.classList.remove("active");
+        }, 150);
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Optimized canvas size for smaller files
+        canvas.width = Math.min(video.videoWidth || 1024, 1024); // Max 1024px wide
+        canvas.height = Math.min(video.videoHeight || 576, 576); // Max 576px tall
+
+        if (video.videoWidth > 0) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        } else {
+          // If no camera, create a placeholder for testing
+          ctx.fillStyle = "#333";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#fff";
+          ctx.font = "32px Arial"; // Smaller font for smaller canvas
+          ctx.textAlign = "center";
+          ctx.fillText("Test Photo", canvas.width / 2, canvas.height / 2);
+          ctx.fillText(
+            steps[currentStep],
+            canvas.width / 2,
+            canvas.height / 2 + 40
+          );
+        }
+
+        // Reduced JPEG quality to achieve target file size
+        canvas.toBlob(
+          async (blob) => {
+            recordedBlob = blob;
+            console.log("Photo captured:", Math.round(blob.size / 1024), "KB");
+
+            // If still too large, try with even lower quality
+            if (blob.size > 300 * 1024) {
+              // If over 300KB
+              canvas.toBlob(
+                async (smallerBlob) => {
+                  recordedBlob = smallerBlob;
+                  console.log(
+                    "Photo re-compressed:",
+                    Math.round(smallerBlob.size / 1024),
+                    "KB"
+                  );
+                  await handleUpload();
+                },
+                "image/jpeg",
+                0.5
+              ); // 50% quality for very small files
+            } else {
+              await handleUpload();
+            }
+          },
+          "image/jpeg",
+          0.7
+        ); // 70% quality instead of 90%
+      }
+
+      // Handle upload and track URLs
+      async function handleUpload() {
+        if (recordedBlob || isTestMode) {
+          statusBar.textContent = `Lighting: 🟢 OK | Uploading photo...`;
+
+          let uploadResult;
+
+          if (isTestMode) {
+            // In test mode, simulate upload with test photo URL
+            uploadResult = testFolderPhotos[currentStep] || testFolderPhotos[0];
+
+            // Simulate upload delay
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          } else {
+            uploadResult = await uploadToR2(recordedBlob, true);
+          }
+
+          if (uploadResult) {
+            // Store the uploaded URL
+            uploadedVideoUrls.push({
+              step: currentStep + 1,
+              stepName: steps[currentStep],
+              url: uploadResult,
+              type: "photo",
+              timestamp: new Date().toISOString(),
+              fileSize: isTestMode
+                ? Math.floor(Math.random() * 150 + 100) + " KB"
+                : Math.round(recordedBlob.size / 1024) + " KB",
+            });
+
+            nextButton.disabled = false;
+            statusBar.textContent = `Lighting: 🟢 OK | Photo uploaded! ✅ (${
+              isTestMode
+                ? "Test photo"
+                : Math.round(recordedBlob.size / 1024) + " KB"
+            })`;
+            console.log("File available at:", uploadResult);
+          } else {
+            statusBar.textContent = `Lighting: 🟢 OK | Upload failed ❌ - try again`;
+          }
+        }
+      }
+
+      // Trigger when all 18 steps are complete
+      async function triggerInspectionComplete() {
+        const inspectionId = Date.now();
+        const completionData = {
+          inspectionId: inspectionId,
+          vehicleInfo: vehicleInfo,
+          completedAt: new Date().toISOString(),
+          totalSteps: steps.length,
+          uploadedFiles: uploadedVideoUrls,
+          summary: {
+            totalFiles: uploadedVideoUrls.length,
+            totalSize:
+              uploadedVideoUrls.reduce((sum, file) => {
+                return sum + parseInt(file.fileSize.replace(" KB", ""));
+              }, 0) + " KB",
+            photoCount: uploadedVideoUrls.length,
+            videoCount: 0,
+          },
+          readyForAIAnalysis: true,
+          status: "inspection_complete",
+          testMode: isTestMode,
+        };
+
+        try {
+          const webhookUrl =
+            "https://hamzaw.app.n8n.cloud/webhook-test/50903630-1eac-46a7-a041-6b5614e9f533";
+
+          console.log("🚀 Triggering inspection completion webhook...");
+          console.log("Completion data:", completionData);
+
+          const response = await fetch(webhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(completionData),
+          });
+
+          if (response.ok) {
+            stepInstruction.textContent = `✅ ${vehicleInfo} inspection sent for AI analysis!`;
+            statusBar.textContent =
+              "Processing complete - AI analysis started! 🤖";
+            console.log("✅ Webhook sent successfully to n8n!");
+          } else {
+            stepInstruction.textContent = `❌ Failed to trigger analysis. Please contact support.`;
+            console.error(
+              "❌ Webhook failed:",
+              response.status,
+              response.statusText
+            );
+          }
+        } catch (error) {
+          console.error("Webhook trigger failed:", error);
+          stepInstruction.textContent = `❌ Failed to trigger analysis. Please contact support.`;
+        }
+      }
+
+      // Lighting check (simplified for photo mode)
+      function checkLighting() {
+        if (!inspectionStarted || video.readyState < 2) return;
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = video.videoWidth || 100;
+        canvas.height = video.videoHeight || 100;
+
+        if (video.videoWidth > 0) {
+          ctx.drawImage(video, 0, 0);
+          const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          let total = 0;
+
+          for (let i = 0; i < frame.data.length; i += 4) {
+            const brightness =
+              0.299 * frame.data[i] +
+              0.587 * frame.data[i + 1] +
+              0.114 * frame.data[i + 2];
+            total += brightness;
+          }
+
+          const avg = total / (frame.data.length / 4);
+          const lightOK = avg > 30 && avg < 200;
+
+          if (!recordedBlob) {
+            statusBar.textContent = `Lighting: ${
+              lightOK ? "🟢 OK" : "🔴 Check"
+            } | Ready for photo`;
+          }
+        } else {
+          statusBar.textContent = "📷 Test mode - Ready for photo";
+        }
+      }
+
+      function loopStatus() {
+        checkLighting();
+        requestAnimationFrame(loopStatus);
+      }
+
+      // Event listeners
+      photoButton.addEventListener("click", () => {
+        if (isTestMode) {
+          // In test mode, simulate photo capture
+          handleUpload();
+        } else {
+          capturePhoto();
+        }
+      });
+
+      nextButton.addEventListener("click", async () => {
+        if (currentStep < steps.length - 1) {
+          currentStep++;
+          updateStep();
+        } else {
+          stepInstruction.textContent = `🎉 ${vehicleInfo} inspection completed! Processing...`;
+          nextButton.style.display = "none";
+          photoButton.style.display = "none";
+
+          await triggerInspectionComplete();
+        }
+      });
+
+      // Initialize app
+      startCamera();
+      loopStatus();
+    </script>
+  </body>
+</html>
