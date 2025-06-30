@@ -294,101 +294,70 @@
     <script>
       console.log('Script starting...');
       
-      // Mobile-first authentication setup
+      // FIXED Mobile authentication - stops checking after login
       let currentUser = null;
       let authChecked = false;
+      let loginSuccessful = false; // NEW: Track if login was successful
       let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      let authRetryCount = 0;
-      const MAX_AUTH_RETRIES = 3;
       
       console.log('Device type:', isMobile ? 'Mobile' : 'Desktop');
       
       // Check for authentication when page loads
       if (window.netlifyIdentity) {
         
-        // On mobile, check auth state multiple times with longer delays
-        function checkAuthState() {
-          console.log(`Auth check attempt ${authRetryCount + 1}/${MAX_AUTH_RETRIES}`);
+        // Handle successful login FIRST - this stops all other checks
+        netlifyIdentity.on('login', user => {
+          console.log('✅ LOGIN SUCCESS:', user.email);
+          currentUser = user;
+          loginSuccessful = true; // STOP all future auth checks
+          authChecked = true;
           
-          const user = netlifyIdentity.currentUser();
-          if (user) {
-            console.log('✅ User found:', user.email);
-            currentUser = user;
-            authChecked = true;
-            return true;
-          }
-          
-          authRetryCount++;
-          if (authRetryCount < MAX_AUTH_RETRIES) {
-            console.log('❌ No user found, retrying...');
-            setTimeout(checkAuthState, isMobile ? 2000 : 1000);
-            return false;
-          } else {
-            console.log('❌ Max retries reached, redirecting to auth');
-            authChecked = true;
-            window.location.href = '/auth.html';
-            return false;
-          }
-        }
+          // DO NOT redirect, just stay logged in
+          console.log('📱 Staying on current page after login');
+        });
         
         netlifyIdentity.on('init', user => {
           console.log('🔐 Netlify Identity initialized');
           
-          // Start checking auth state with delay
-          setTimeout(() => {
-            checkAuthState();
-          }, isMobile ? 3000 : 1500);
-        });
-        
-        // Handle successful login
-        netlifyIdentity.on('login', user => {
-          console.log('✅ Login successful:', user.email);
-          currentUser = user;
-          authChecked = true;
-          
-          // On mobile, force page reload to ensure clean state
-          if (isMobile) {
-            console.log('📱 Mobile login detected, reloading...');
+          // ONLY check auth if login hasn't already succeeded
+          if (!loginSuccessful) {
             setTimeout(() => {
-              window.location.href = '/';
-            }, 1000);
+              checkAuthOnce();
+            }, isMobile ? 2000 : 1000);
           }
         });
+        
+        // Simple one-time auth check - NO RETRIES
+        function checkAuthOnce() {
+          // If login already succeeded, do nothing
+          if (loginSuccessful) {
+            console.log('✅ Login already successful, skipping auth check');
+            return;
+          }
+          
+          const user = netlifyIdentity.currentUser();
+          if (user) {
+            console.log('✅ User already logged in:', user.email);
+            currentUser = user;
+            authChecked = true;
+          } else {
+            console.log('❌ No user found, redirecting to auth');
+            window.location.href = '/auth.html';
+          }
+        }
         
         // Handle logout
         netlifyIdentity.on('logout', () => {
           console.log('🚪 User logged out');
           currentUser = null;
+          loginSuccessful = false;
           window.location.href = '/auth.html';
         });
-        
-        // Mobile-specific: Handle popup events
-        if (isMobile) {
-          netlifyIdentity.on('open', () => {
-            console.log('📱 Login popup opened');
-          });
-          
-          netlifyIdentity.on('close', () => {
-            console.log('📱 Login popup closed');
-            // Give extra time for mobile to process login
-            setTimeout(() => {
-              const user = netlifyIdentity.currentUser();
-              if (user && !currentUser) {
-                console.log('📱 Late login detection, refreshing...');
-                window.location.reload();
-              } else if (!user && !currentUser) {
-                console.log('📱 No login detected after popup close');
-                // Don't redirect immediately, user might try again
-              }
-            }, 2000);
-          });
-        }
         
         netlifyIdentity.init();
         
       } else {
         console.log('❌ Netlify Identity not available');
-        // Fallback for development
         currentUser = { id: 'test-user', email: 'test@example.com' };
         authChecked = true;
       }
