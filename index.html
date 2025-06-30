@@ -4,7 +4,6 @@
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|<!DOCTYPE html>
 <html lang="en">
   <head>
-    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Car Inspection Recorder</title>
@@ -242,74 +241,12 @@
   </head>
   <body>
     <script>
-      let currentUser = null;
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      let allowRedirects = !isMobile; // On mobile, block redirects initially
-      
-      // Prevent aggressive redirects too early on mobile
-      if (isMobile) {
-        console.log('📱 Mobile detected - delaying redirects...');
-        setTimeout(() => {
-          allowRedirects = true;
-          console.log('📱 Mobile redirect block lifted after 10 seconds');
-        }, 10000);
-      }
-      
-      function redirectIfNeeded() {
-        if (!currentUser && allowRedirects) {
-          console.log('🔁 Redirecting to /auth.html due to no user session');
-          window.location.href = '/auth.html';
-        } else {
-          console.log('✅ User session active or redirects not allowed yet');
-        }
-      }
-      
-      if (window.netlifyIdentity) {
-        netlifyIdentity.on('init', user => {
-          currentUser = user;
-          if (user) {
-            console.log('✅ User already authenticated:', user.email);
-            allowRedirects = true;
-          } else {
-            console.log('❌ No user session found on init');
-          }
-          // Delay checking redirect just slightly to give init time to finish properly
-          setTimeout(() => {
-            redirectIfNeeded();
-          }, isMobile ? 1500 : 500); // mobile needs a longer buffer
-        });
-        
-        netlifyIdentity.on('login', user => {
-          console.log('✅ User logged in:', user.email);
-          currentUser = user;
-          allowRedirects = true;
-          // Stay on current page after login (don't redirect to dashboard)
-          console.log('✅ Login complete - staying on inspection app');
-        });
-        
-        netlifyIdentity.on('logout', () => {
-          console.log('👋 User logged out');
-          currentUser = null;
-          setTimeout(() => {
-            window.location.href = '/auth.html';
-          }, 500);
-        });
-        
-        netlifyIdentity.init();
-      } else {
-        console.warn('⚠️ Netlify Identity not available');
-        setTimeout(() => {
-          redirectIfNeeded();
-        }, 2000); // give it a chance to load
-      }
-      
-      // Safety net: force redirect after 12s if still no session
-      setTimeout(() => {
-        if (!currentUser && allowRedirects) {
-          console.log('⏰ Timeout: Forcing redirect to login');
-          window.location.href = '/auth.html';
-        }
-      }, 12000);
+      // AUTH COMPLETELY DISABLED - App works immediately
+      let currentUser = { 
+        id: 'user-' + Date.now(), 
+        email: 'user@example.com' 
+      };
+      console.log('✅ Auth disabled - using test user:', currentUser.email);
     </script>
     
     <video id="video" autoplay muted playsinline></video>
@@ -1054,18 +991,6 @@
       startCamera();
       loopStatus();
       console.log('Setup complete!');
-    </script>
-    
-    <script>
-      if (window.netlifyIdentity) {
-        window.netlifyIdentity.on("init", user => {
-          if (!user) {
-            window.netlifyIdentity.on("login", () => {
-              document.location.href = "/dashboard.html";
-            });
-          }
-        });
-      }
     </script>
   </body>
 </html>
