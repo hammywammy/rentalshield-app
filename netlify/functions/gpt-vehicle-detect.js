@@ -1,22 +1,31 @@
-// Fixed GPT-4 Vision function - put this in netlify/functions/gpt-vehicle-detect.js
+// Fixed Netlify function format - put this in netlify/functions/gpt-vehicle-detect.js
 
-export default async (req, res) => {
+export const handler = async (event, context) => {
   try {
     console.log('🤖 GPT function called');
     
-    if (req.method !== 'POST') {
-      return res.status(405).json({ success: false, error: 'Method not allowed' });
+    if (event.httpMethod !== 'POST') {
+      return {
+        statusCode: 405,
+        body: JSON.stringify({ success: false, error: 'Method not allowed' })
+      };
     }
 
-    const { imageBase64, userId } = req.body;
+    const { imageBase64, userId } = JSON.parse(event.body);
     
     if (!imageBase64) {
-      return res.status(400).json({ success: false, error: 'No image provided' });
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ success: false, error: 'No image provided' })
+      };
     }
 
     if (!process.env.OPENAI_API_KEY) {
       console.error('❌ No OpenAI API key found');
-      return res.status(500).json({ success: false, error: 'OpenAI API key not configured' });
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ success: false, error: 'OpenAI API key not configured' })
+      };
     }
 
     console.log('🤖 Calling OpenAI GPT-4 Vision...');
@@ -54,10 +63,13 @@ export default async (req, res) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ OpenAI API error:', errorText);
-      return res.status(500).json({ 
-        success: false, 
-        error: `OpenAI API error: ${response.status} ${errorText}` 
-      });
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ 
+          success: false, 
+          error: `OpenAI API error: ${response.status} ${errorText}` 
+        })
+      };
     }
 
     const result = await response.json();
@@ -72,32 +84,44 @@ export default async (req, res) => {
         const vehicleData = JSON.parse(content);
         console.log('✅ Parsed vehicle data:', vehicleData);
         
-        return res.json({
-          success: true,
-          vehicle: vehicleData
-        });
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            success: true,
+            vehicle: vehicleData
+          })
+        };
       } catch (parseError) {
         console.error('❌ JSON parse error:', parseError);
         console.error('❌ Content that failed to parse:', result.choices[0].message.content);
         
-        return res.json({
-          success: false,
-          error: "Could not parse vehicle data from GPT response"
-        });
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            success: false,
+            error: "Could not parse vehicle data from GPT response"
+          })
+        };
       }
     } else {
       console.error('❌ Unexpected OpenAI response structure:', result);
-      return res.json({
-        success: false,
-        error: "No valid response from GPT-4"
-      });
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          success: false,
+          error: "No valid response from GPT-4"
+        })
+      };
     }
     
   } catch (error) {
     console.error('❌ GPT function error:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Internal server error'
-    });
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        success: false,
+        error: error.message || 'Internal server error'
+      })
+    };
   }
 };
