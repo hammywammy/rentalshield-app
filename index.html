@@ -243,67 +243,58 @@
   <body>
     <script>
       let currentUser = null;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
-      // Check if we're returning from auth (prevents mobile redirect loop)
-      const urlParams = new URLSearchParams(window.location.search);
-      const isReturningFromAuth = window.location.href.includes('#access_token') || 
-                                  urlParams.has('access_token') || 
-                                  sessionStorage.getItem('returning_from_auth') === 'true';
-      
-      if (isReturningFromAuth) {
-        console.log('Returning from auth - preventing redirect');
-        sessionStorage.setItem('returning_from_auth', 'true');
+      // HARD BLOCK: No redirects for first 10 seconds on mobile
+      let allowRedirects = !isMobile; // Desktop can redirect immediately
+      if (isMobile) {
+        console.log('📱 Mobile detected - blocking redirects for 10 seconds');
+        setTimeout(() => {
+          allowRedirects = true;
+          console.log('📱 Mobile redirect block lifted');
+        }, 10000);
       }
 
-      // Mobile-safe authentication
+      // Authentication with mobile protection
       if (window.netlifyIdentity) {
+        netlifyIdentity.on('login', user => {
+          console.log('✅ LOGIN SUCCESS:', user.email);
+          currentUser = user;
+          allowRedirects = true; // Allow redirects after successful login
+        });
+        
         netlifyIdentity.on('init', user => {
           currentUser = user;
           if (user) {
-            console.log('User authenticated:', user.email);
-            // Clear the returning flag on successful auth
-            sessionStorage.removeItem('returning_from_auth');
-          } else if (!isReturningFromAuth) {
-            console.log('No user authenticated - redirecting to auth');
-            setTimeout(() => {
-              if (!currentUser) {
-                window.location.href = '/auth.html';
-              }
-            }, 2000);
+            console.log('✅ User already authenticated:', user.email);
+            allowRedirects = true;
           } else {
-            console.log('Returning from auth - waiting for login to complete...');
-            // Give extra time for mobile auth to complete
-            setTimeout(() => {
-              const retryUser = netlifyIdentity.currentUser();
-              if (retryUser) {
-                console.log('Login completed:', retryUser.email);
-                currentUser = retryUser;
-                sessionStorage.removeItem('returning_from_auth');
-              } else {
-                console.log('Auth failed after retry');
-                sessionStorage.removeItem('returning_from_auth');
-                window.location.href = '/auth.html';
-              }
-            }, 5000);
+            console.log('❌ No user found');
+            // Only redirect if allowed
+            if (allowRedirects) {
+              console.log('🔄 Redirecting to auth...');
+              window.location.href = '/auth.html';
+            } else {
+              console.log('🚫 Redirect blocked - waiting for mobile auth...');
+            }
           }
-        });
-        
-        // Handle successful login
-        netlifyIdentity.on('login', user => {
-          console.log('Login successful:', user.email);
-          currentUser = user;
-          sessionStorage.removeItem('returning_from_auth');
         });
         
         netlifyIdentity.init();
       } else {
-        console.log('Netlify Identity not available');
-        if (!isReturningFromAuth) {
-          setTimeout(() => {
-            window.location.href = '/auth.html';
-          }, 2000);
+        console.log('❌ Netlify Identity not available');
+        if (allowRedirects) {
+          window.location.href = '/auth.html';
         }
       }
+      
+      // Safety check - redirect after 10 seconds if still no user
+      setTimeout(() => {
+        if (!currentUser && allowRedirects) {
+          console.log('⏰ 10 second timeout - redirecting to auth');
+          window.location.href = '/auth.html';
+        }
+      }, 10000);
     </script>
     
     <video id="video" autoplay muted playsinline></video>
