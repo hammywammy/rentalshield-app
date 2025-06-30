@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Car Inspection Recorder</title>
+    <title>Car Inspection - Enterprise Functions</title>
     <style>
       * {
         margin: 0;
@@ -13,7 +13,7 @@
       
       body {
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        font-family: Arial, sans-serif;
         background: black;
         overflow: hidden;
         position: fixed;
@@ -32,7 +32,7 @@
         background: #000;
       }
       
-      /* User selection screen */
+      /* Simple user selection */
       #user-selection-screen {
         position: fixed;
         top: 0;
@@ -51,15 +51,8 @@
       }
       
       #user-selection-screen h1 {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-        font-weight: 700;
-      }
-      
-      #user-selection-screen p {
-        font-size: 1.2rem;
+        font-size: 2rem;
         margin-bottom: 2rem;
-        opacity: 0.9;
       }
       
       .user-buttons {
@@ -71,35 +64,20 @@
       }
       
       .user-btn {
-        padding: 1.5rem;
-        background: linear-gradient(135deg, #1976d2, #1565c0);
+        padding: 1rem;
+        background: #333;
         color: white;
         border: none;
-        border-radius: 12px;
+        border-radius: 8px;
         cursor: pointer;
-        transition: all 0.3s;
-        text-align: left;
+        font-size: 1rem;
       }
       
       .user-btn:hover {
-        background: linear-gradient(135deg, #1565c0, #0d47a1);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(25, 118, 210, 0.3);
+        background: #555;
       }
       
-      .user-info strong {
-        display: block;
-        font-size: 1.3rem;
-        margin-bottom: 0.5rem;
-      }
-      
-      .user-info small {
-        display: block;
-        opacity: 0.8;
-        font-size: 0.9rem;
-        margin-bottom: 0.2rem;
-      }
-      
+      /* Simple start screen */
       #start-screen {
         position: fixed;
         top: 0;
@@ -118,47 +96,26 @@
       }
       
       #start-screen h1 {
-        font-size: 2.5rem;
-        margin-bottom: 1.5rem;
-        font-weight: 700;
-      }
-      
-      #start-screen p {
-        font-size: 1.2rem;
+        font-size: 2rem;
         margin-bottom: 2rem;
-        opacity: 0.9;
-        line-height: 1.6;
-        max-width: 600px;
       }
       
       .btn {
         padding: 1rem 2rem;
-        background: #4caf50;
+        background: #444;
         color: white;
         border: none;
         border-radius: 8px;
-        font-size: 1.2rem;
-        font-weight: 600;
+        font-size: 1rem;
         cursor: pointer;
         margin: 0.5rem;
-        transition: all 0.2s;
-        min-width: 180px;
       }
       
       .btn:hover {
-        background: #45a049;
-        transform: translateY(-1px);
+        background: #666;
       }
       
-      .btn-test {
-        background: #ff9800;
-        font-size: 1rem;
-      }
-      
-      .btn-test:hover {
-        background: #e68900;
-      }
-      
+      /* Simple UI elements */
       #status-bar {
         position: fixed;
         top: 20px;
@@ -167,13 +124,10 @@
         background: rgba(0, 0, 0, 0.8);
         color: white;
         padding: 1rem;
-        font-size: 1.1rem;
-        border-radius: 12px;
+        border-radius: 8px;
         text-align: center;
         z-index: 50;
-        user-select: none;
         display: none;
-        backdrop-filter: blur(10px);
       }
       
       #step-instruction {
@@ -183,17 +137,11 @@
         right: 20px;
         background: rgba(0, 0, 0, 0.8);
         color: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        font-size: 1.3rem;
+        padding: 1rem;
+        border-radius: 8px;
         text-align: center;
         z-index: 50;
-        line-height: 1.4;
-        user-select: none;
-        word-wrap: break-word;
         display: none;
-        backdrop-filter: blur(10px);
-        font-weight: 500;
       }
       
       #photo-button,
@@ -201,49 +149,29 @@
         position: fixed;
         bottom: 30px;
         padding: 1rem 2rem;
-        font-size: 1.4rem;
-        font-weight: 600;
-        border-radius: 50px;
+        font-size: 1.2rem;
+        border-radius: 8px;
         border: none;
         color: white;
         cursor: pointer;
         z-index: 50;
-        user-select: none;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-        transition: all 0.2s;
         display: none;
       }
       
       #photo-button {
         left: 50%;
         transform: translateX(-50%);
-        background: linear-gradient(45deg, #2196f3, #1976d2);
-        font-size: 1.6rem;
-        padding: 1.2rem 2.5rem;
-        min-width: 180px;
-      }
-      
-      #photo-button:hover {
-        transform: translateX(-50%) translateY(-2px);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+        background: #007bff;
       }
       
       #next-button {
         right: 30px;
-        background: linear-gradient(45deg, #4caf50, #388e3c);
-        min-width: 140px;
-      }
-      
-      #next-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+        background: #28a745;
       }
       
       #next-button:disabled {
         background: #666;
-        opacity: 0.5;
         cursor: not-allowed;
-        transform: none;
       }
       
       .flash-effect {
@@ -260,10 +188,10 @@
       }
       
       .flash-effect.active {
-        opacity: 0.9;
+        opacity: 0.8;
       }
       
-      /* Vehicle confirmation popup */
+      /* Simple popup */
       .vehicle-popup {
         position: fixed;
         top: 50%;
@@ -271,80 +199,43 @@
         transform: translate(-50%, -50%);
         background: white;
         padding: 2rem;
-        border-radius: 16px;
+        border-radius: 8px;
         z-index: 500;
         text-align: center;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         max-width: 400px;
         width: 90%;
         color: #333;
-      }
-      
-      .vehicle-popup h3 {
-        margin: 0 0 1rem 0;
-        color: #333;
-        font-size: 1.4rem;
-        font-weight: 600;
-      }
-      
-      .vehicle-popup p {
-        margin: 0.5rem 0;
-        color: #666;
-        font-size: 1rem;
-        line-height: 1.4;
-      }
-      
-      .vehicle-popup strong {
-        color: #333;
-        font-size: 1.1rem;
       }
       
       .popup-buttons {
         display: flex;
         gap: 1rem;
         justify-content: center;
-        margin-top: 1.5rem;
-        flex-wrap: wrap;
+        margin-top: 1rem;
       }
       
       .popup-btn {
         padding: 0.8rem 1.5rem;
         border: none;
-        border-radius: 8px;
+        border-radius: 4px;
         cursor: pointer;
         font-size: 1rem;
-        font-weight: 600;
-        transition: all 0.2s;
-        min-width: 120px;
-      }
-      
-      .popup-btn:hover {
-        transform: translateY(-1px);
       }
       
       .btn-yes {
-        background: #4caf50;
+        background: #28a745;
         color: white;
       }
       
       .btn-no {
-        background: #f44336;
+        background: #dc3545;
         color: white;
       }
       
-      .btn-yes:hover {
-        background: #45a049;
-      }
-      
-      .btn-no:hover {
-        background: #da190b;
-      }
-      
-      /* Manual vehicle form */
       .manual-form {
         background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 12px;
+        padding: 1rem;
+        border-radius: 8px;
         margin: 1rem 0;
         text-align: left;
       }
@@ -357,45 +248,18 @@
       
       .form-row input {
         flex: 1;
-        padding: 0.8rem;
-        border: 2px solid #ddd;
-        border-radius: 6px;
-        font-size: 1rem;
-      }
-      
-      .form-row input:focus {
-        outline: none;
-        border-color: #4caf50;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
       }
       
       .form-row label {
         display: block;
+        margin-bottom: 0.25rem;
         font-size: 0.9rem;
-        color: #666;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
       }
       
-      /* Mobile responsive */
       @media (max-width: 768px) {
-        #start-screen h1 {
-          font-size: 2rem;
-        }
-        
-        #start-screen p {
-          font-size: 1.1rem;
-        }
-        
-        .btn {
-          padding: 1rem 1.5rem;
-          font-size: 1.1rem;
-        }
-        
-        #step-instruction {
-          bottom: 120px;
-          font-size: 1.2rem;
-        }
-        
         .form-row {
           flex-direction: column;
           gap: 0.5rem;
@@ -416,75 +280,46 @@
 
     <!-- User Selection Screen -->
     <div id="user-selection-screen">
-      <h1>🚗 Select Test User</h1>
-      <p>Choose which test user account to use:</p>
+      <h1>Select User Account</h1>
       <div class="user-buttons">
         <button id="user1-btn" class="user-btn" data-user="1">
-          <div class="user-info">
-            <strong>👤 Your Real Account</strong>
-            <small>user1@test.com</small>
-            <small>Has your 2016 Cadillac SRX (License: 1393)</small>
-          </div>
+          User 1 - Your Real Account (2016 Cadillac SRX - License: 1393)
         </button>
         <button id="user2-btn" class="user-btn" data-user="2">
-          <div class="user-info">
-            <strong>👤 User 2</strong>
-            <small>user2@test.com</small>
-            <small>Clean account - no vehicles</small>
-          </div>
+          User 2 - Test Account (No vehicles)
         </button>
         <button id="user3-btn" class="user-btn" data-user="3">
-          <div class="user-info">
-            <strong>👤 User 3</strong>
-            <small>user3@test.com</small>
-            <small>Clean account - no vehicles</small>
-          </div>
+          User 3 - Test Account (No vehicles)
         </button>
       </div>
     </div>
 
     <!-- Start Screen -->
-    <div id="start-screen" style="display: none;">
-      <h1>🚗 Car Inspection</h1>
-      <p>Welcome to the vehicle inspection app.<br><br>
-      <strong>Instructions:</strong><br>
-      • First, take a clear photo of your license plate<br>
-      • Then follow the 18-step inspection process<br>
-      • Each photo will be automatically uploaded and analyzed</p>
+    <div id="start-screen">
+      <h1>Car Inspection - Enterprise Functions</h1>
+      <p>Testing hybrid R2 + Supabase system with organized file structure</p>
       <button id="start-inspection-btn" class="btn">Start Inspection</button>
-      <button id="test-mode-btn" class="btn btn-test">🧪 Test Mode</button>
-      <button id="back-to-users-btn" class="btn" style="background: #666; margin-top: 1rem;">← Back to User Selection</button>
+      <button id="test-mode-btn" class="btn">Test Mode</button>
+      <button id="back-to-users-btn" class="btn">← Back to Users</button>
     </div>
 
     <!-- Status and Controls -->
-    <div id="status-bar">Ready to start...</div>
+    <div id="status-bar">Ready</div>
     <div id="step-instruction">Loading...</div>
-    <button id="photo-button">📸 Take Photo</button>
+    <button id="photo-button">Take Photo</button>
     <button id="next-button" disabled>Next Step</button>
 
     <script>
-      console.log('Script starting...');
+      console.log('Enterprise Functions Starting...');
       
-      // Test users configuration
+      // Test users
       const TEST_USERS = {
-        1: {
-          id: '11111111-1111-1111-1111-111111111111',
-          email: 'user1@test.com',
-          name: 'Test User 1'
-        },
-        2: {
-          id: '22222222-2222-2222-2222-222222222222',
-          email: 'user2@test.com', 
-          name: 'Test User 2'
-        },
-        3: {
-          id: '33333333-3333-3333-3333-333333333333',
-          email: 'user3@test.com',
-          name: 'Test User 3'
-        }
+        1: { id: '11111111-1111-1111-1111-111111111111', email: 'user1@test.com', name: 'User 1' },
+        2: { id: '22222222-2222-2222-2222-222222222222', email: 'user2@test.com', name: 'User 2' },
+        3: { id: '33333333-3333-3333-3333-333333333333', email: 'user3@test.com', name: 'User 3' }
       };
 
-      // Global variables - declared once
+      // Global variables
       let supabase = null;
       let currentUser = null;
       let currentStep = -1;
@@ -493,29 +328,28 @@
       let inspectionStarted = false;
       let uploadedFiles = [];
       let isTestMode = false;
-      let userVehicles = [];
       let currentVehicleId = null;
       let currentInspectionId = null;
       
       const steps = [
-        "front_bumper",
-        "driver_side_front_fender", 
-        "driver_side_front_wheel",
-        "driver_side_doors",
-        "driver_side_rear_wheel",
-        "driver_side_rear_fender",
-        "rear_bumper",
-        "passenger_side_rear_fender",
-        "passenger_side_rear_wheel", 
-        "passenger_side_doors",
-        "passenger_side_front_wheel",
-        "passenger_side_front_fender",
-        "front_windshield",
-        "interior_dashboard",
-        "interior_front_seats",
-        "interior_rear_seats",
-        "odometer",
-        "trunk_cargo_area",
+        { name: "front_bumper", category: "exterior" },
+        { name: "driver_side_front_fender", category: "exterior" },
+        { name: "driver_side_front_wheel", category: "exterior" },
+        { name: "driver_side_doors", category: "exterior" },
+        { name: "driver_side_rear_wheel", category: "exterior" },
+        { name: "driver_side_rear_fender", category: "exterior" },
+        { name: "rear_bumper", category: "exterior" },
+        { name: "passenger_side_rear_fender", category: "exterior" },
+        { name: "passenger_side_rear_wheel", category: "exterior" },
+        { name: "passenger_side_doors", category: "exterior" },
+        { name: "passenger_side_front_wheel", category: "exterior" },
+        { name: "passenger_side_front_fender", category: "exterior" },
+        { name: "front_windshield", category: "exterior" },
+        { name: "interior_dashboard", category: "interior" },
+        { name: "interior_front_seats", category: "interior" },
+        { name: "interior_rear_seats", category: "interior" },
+        { name: "odometer", category: "documents" },
+        { name: "trunk_cargo_area", category: "cargo" }
       ];
 
       // Get elements
@@ -526,94 +360,32 @@
       const photoButton = document.getElementById("photo-button");
       const userSelectionScreen = document.getElementById("user-selection-screen");
       const startScreen = document.getElementById("start-screen");
-      const startInspectionBtn = document.getElementById("start-inspection-btn");
-      const testModeBtn = document.getElementById("test-mode-btn");
-      const backToUsersBtn = document.getElementById("back-to-users-btn");
       const flashEffect = document.getElementById("flash-effect");
 
-      console.log('Elements found:', {
-        userSelectionScreen: !!userSelectionScreen,
-        startInspectionBtn: !!startInspectionBtn,
-        testModeBtn: !!testModeBtn,
-        photoButton: !!photoButton,
-        nextButton: !!nextButton
-      });
-
-      // Initialize Supabase connection
+      // Initialize Supabase
       async function initSupabase() {
         try {
           const configResponse = await fetch('/.netlify/functions/get-config');
           const config = await configResponse.json();
-          
           supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
           console.log('✅ Supabase initialized');
-          
         } catch (error) {
-          console.error('❌ Supabase initialization failed:', error);
+          console.error('❌ Supabase failed:', error);
         }
-      }
-
-      // Select user function
-      function selectUser(userNumber) {
-        currentUser = TEST_USERS[userNumber];
-        console.log('✅ Selected user:', currentUser.name, currentUser.email);
-        
-        userSelectionScreen.style.display = "none";
-        startScreen.style.display = "flex";
-        
-        // Load vehicles for this user
-        loadUserVehicles();
-      }
-
-      // Back to user selection
-      function backToUserSelection() {
-        startScreen.style.display = "none";
-        userSelectionScreen.style.display = "flex";
-        currentUser = null;
-        
-        // Reset any inspection state
-        inspectionStarted = false;
-        currentStep = -1;
-        vehicleInfo = null;
-        detectedVehicle = null;
-        uploadedFiles = [];
-        userVehicles = [];
-        currentVehicleId = null;
-        currentInspectionId = null;
       }
 
       // Start camera
       async function startCamera() {
         try {
-          console.log('Requesting camera...');
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "environment",
-              width: { ideal: 1280, max: 1280 },
-              height: { ideal: 720, max: 720 },
-              frameRate: { ideal: 30 },
-            },
+            video: { facingMode: "environment" },
             audio: false,
           });
           video.srcObject = stream;
-          console.log("Camera started successfully");
+          console.log("✅ Camera started");
         } catch (e) {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-              video: {
-                facingMode: "environment",
-                width: { ideal: 1024, max: 1024 },
-                height: { ideal: 576, max: 576 },
-                frameRate: { ideal: 30 },
-              },
-              audio: false,
-            });
-            video.srcObject = stream;
-            console.log("Camera started with fallback settings");
-          } catch (e2) {
-            console.log("Camera not available:", e2);
-            video.style.display = 'none';
-          }
+          console.log("❌ Camera failed");
+          video.style.display = 'none';
         }
       }
 
@@ -625,78 +397,93 @@
         });
       }
 
-      // Vehicle matching functions
-      function cleanPlate(plate) {
-        return plate.replace(/[^A-Z0-9]/g, '').toUpperCase();
+      // Select user
+      function selectUser(userNumber) {
+        currentUser = TEST_USERS[userNumber];
+        console.log('✅ Selected:', currentUser.name);
+        userSelectionScreen.style.display = "none";
+        startScreen.style.display = "flex";
       }
 
-      function findExistingVehicle(detectedVehicle) {
-        // This function is no longer needed - we use checkSpecificVehicle instead
-        console.log('🔄 Using direct database query instead of in-memory search');
-        return null;
+      // Back to users
+      function backToUserSelection() {
+        startScreen.style.display = "none";
+        userSelectionScreen.style.display = "flex";
+        currentUser = null;
+        inspectionStarted = false;
+        currentStep = -1;
+        statusBar.style.display = "none";
+        stepInstruction.style.display = "none";
+        photoButton.style.display = "none";
+        nextButton.style.display = "none";
       }
 
-      // Check for specific vehicle by license plate (scalable)
+      // Check vehicle with hybrid system
       async function checkSpecificVehicle(detectedPlate) {
         try {
-          if (!supabase || !currentUser) {
-            console.log('No Supabase connection, skipping vehicle check');
-            return null;
-          }
+          console.log('🔍 Checking hybrid system for:', detectedPlate);
           
-          console.log('🔍 Checking for specific vehicle with plate:', detectedPlate);
+          const response = await fetch('/.netlify/functions/vehicle-hybrid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'find_vehicle',
+              userId: currentUser.id,
+              vehicleData: { license_plate: detectedPlate }
+            })
+          });
           
-          const { data, error } = await supabase
-            .from('vehicles')
-            .select(`
-              *,
-              inspections(
-                id, inspection_date, status, notes
-              )
-            `)
-            .eq('user_id', currentUser.id)
-            .eq('license_plate', detectedPlate)
-            .order('inspections(inspection_date)', { ascending: false })
-            .limit('inspections', 5)  // Only last 5 inspections
-            .single();
+          const result = await response.json();
           
-          if (error && error.code !== 'PGRST116') {
-            console.error('❌ Error checking vehicle:', error);
-            return null;
-          }
-          
-          if (data) {
-            console.log('✅ Found existing vehicle:', data);
-            return {
-              ...data,
-              inspectionHistory: data.inspections || [],
-              totalInspections: data.inspections?.length || 0
-            };
+          if (result.found) {
+            console.log('✅ Found vehicle:', result.vehicle);
+            return result.vehicle;
           } else {
-            console.log('❌ No vehicle found with plate:', detectedPlate);
+            console.log('❌ No vehicle found');
             return null;
           }
-          
         } catch (error) {
-          console.error("❌ Error in checkSpecificVehicle:", error);
+          console.error('❌ Error checking vehicle:', error);
           return null;
         }
       }
 
-      // Load user vehicles from Supabase (REMOVED - now we check specific plates)
-      async function loadUserVehicles() {
-        // This function is no longer needed - we query specific plates only
-        console.log('📝 Vehicle loading now happens per license plate detection');
-        userVehicles = []; // Keep empty - we don't pre-load all vehicles
+      // Create inspection
+      async function createInspection() {
+        try {
+          console.log('📝 Creating inspection in hybrid system');
+          
+          const response = await fetch('/.netlify/functions/vehicle-hybrid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'create_inspection',
+              userId: currentUser.id,
+              vehicleData: { vehicle_id: currentVehicleId },
+              inspectionData: {
+                inspection_date: new Date().toISOString(),
+                status: 'pending'
+              }
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            currentInspectionId = result.inspectionId;
+            console.log('✅ Created inspection:', result.folderPath);
+          }
+        } catch (error) {
+          console.error('❌ Error creating inspection:', error);
+          currentInspectionId = generateUUID();
+        }
       }
 
       // Start inspection
       async function startInspection() {
-        console.log('Starting inspection...');
+        console.log('🚀 Starting inspection');
         isTestMode = false;
         inspectionStarted = true;
-        
-        await loadUserVehicles();
         
         startScreen.style.display = "none";
         statusBar.style.display = "block";
@@ -710,64 +497,42 @@
 
       // Test mode
       async function startTestMode() {
-        console.log('Starting test mode...');
+        console.log('🧪 Test mode');
         isTestMode = true;
         inspectionStarted = true;
         startScreen.style.display = "none";
         statusBar.style.display = "block";
         stepInstruction.style.display = "block";
         
-        statusBar.textContent = "🧪 Test mode - using sample data";
-        stepInstruction.textContent = "🧪 TEST MODE: Simulating inspection complete";
+        statusBar.textContent = "🧪 Test mode active";
+        stepInstruction.textContent = "🧪 TEST MODE: Using sample data";
 
         detectedVehicle = {
-          make: "Toyota",
-          model: "Camry",
-          year: 2023,
-          color: "Silver",
-          license_plate: "TEST123",
-          confidence: 0.95
+          make: "Cadillac", model: "SRX", year: 2016,
+          color: "Dark Blue Gray", license_plate: "TEST123"
         };
         vehicleInfo = detectedVehicle;
         currentVehicleId = generateUUID();
         currentInspectionId = generateUUID();
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        statusBar.textContent = "🧪 Test inspection completed!";
-        stepInstruction.textContent = "🧪 TEST MODE: Test data ready for analysis";
       }
 
-      // Update step display
+      // Update step
       function updateStep() {
         if (currentStep === -1) {
-          stepInstruction.textContent = "📋 Step 0: Take a clear photo of your license plate";
-          statusBar.textContent = "📸 License plate detection - Make sure plate is clearly visible";
+          stepInstruction.textContent = "Step 0: Take license plate photo";
+          statusBar.textContent = "License plate detection ready";
         } else {
-          let vehicleText = "Vehicle";
-          let inspectionContext = "";
-          
-          if (detectedVehicle) {
-            vehicleText = `${detectedVehicle.make} ${detectedVehicle.model} ${detectedVehicle.year}`;
-            
-            if (detectedVehicle.totalInspections > 0) {
-              inspectionContext = ` (Inspection #${detectedVehicle.totalInspections + 1})`;
-            } else {
-              inspectionContext = " (First inspection)";
-            }
-          }
-          
-          stepInstruction.textContent = `${vehicleText}${inspectionContext} - Step ${currentStep + 1} of ${steps.length}: ${steps[currentStep].replace(/_/g, ' ')}`;
-          statusBar.textContent = "📸 Ready to take photo";
+          const step = steps[currentStep];
+          stepInstruction.textContent = `Step ${currentStep + 1}/18: ${step.name.replace(/_/g, ' ')} (${step.category})`;
+          statusBar.textContent = "Ready for photo";
         }
-        
         nextButton.disabled = true;
       }
 
       // License plate detection
       async function detectLicensePlate() {
         try {
-          statusBar.textContent = "🔍 Analyzing license plate with AI...";
+          statusBar.textContent = "🤖 Analyzing with GPT-4o...";
           
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
@@ -777,8 +542,6 @@
           
           const imageData = canvas.toDataURL('image/jpeg', 0.8);
           const base64 = imageData.split(',')[1];
-          
-          console.log('🤖 Calling GPT-4 Vision for vehicle detection...');
           
           const response = await fetch('/.netlify/functions/gpt-vehicle-detect', {
             method: 'POST',
@@ -790,26 +553,23 @@
           });
           
           const result = await response.json();
-          console.log('🤖 GPT-4 Detection result:', result);
+          console.log('🤖 GPT result:', result);
           
           if (result.success && result.vehicle) {
-            console.log('🎯 GPT detected vehicle data:', JSON.stringify(result.vehicle, null, 2));
             statusBar.textContent = "✅ Vehicle detected - checking database...";
             
-            // Use scalable database query instead of in-memory search
             const existingVehicle = await checkSpecificVehicle(result.vehicle.license_plate);
             
             if (existingVehicle) {
-              console.log('📋 Found existing vehicle in database:', existingVehicle.license_plate);
+              console.log('📋 Found existing vehicle');
               result.vehicle.id = existingVehicle.id;
               result.vehicle.inspectionHistory = existingVehicle.inspectionHistory || [];
               result.vehicle.totalInspections = existingVehicle.inspectionHistory?.length || 0;
-              result.vehicle.lastInspection = existingVehicle.inspectionHistory?.length > 0 ? 
-                existingVehicle.inspectionHistory[0] : null; // First item (most recent due to ordering)
+              result.vehicle.lastInspection = existingVehicle.inspectionHistory?.[0] || null;
               
               showVehicleHistoryConfirmation(result.vehicle);
             } else {
-              console.log('🆕 New vehicle detected:', result.vehicle.license_plate);
+              console.log('🆕 New vehicle detected');
               result.vehicle.id = generateUUID();
               result.vehicle.inspectionHistory = [];
               result.vehicle.totalInspections = 0;
@@ -817,49 +577,39 @@
               showNewVehicleConfirmation(result.vehicle);
             }
           } else {
-            console.log('❌ GPT detection failed or returned no vehicle data');
-            console.log('🔄 Full GPT response:', result);
-            statusBar.textContent = "🔍 Couldn't detect clearly - please confirm details";
+            console.log('❌ Detection failed');
+            statusBar.textContent = "Detection failed - manual entry";
             showSimpleVehicleEntry();
           }
           
         } catch (error) {
-          console.error('❌ License plate detection error:', error);
-          statusBar.textContent = "🔍 Detection failed - please enter details";
+          console.error('❌ Detection error:', error);
+          statusBar.textContent = "Detection failed - manual entry";
           showSimpleVehicleEntry();
         }
       }
 
-      // Show popups
+      // Show vehicle confirmation popups
       function showVehicleHistoryConfirmation(vehicleData) {
-        console.log('📋 Showing vehicle history confirmation:', vehicleData);
-        
         const popup = document.createElement('div');
         popup.className = 'vehicle-popup';
-        popup.id = 'vehicle-history-confirmation';
+        popup.id = 'vehicle-confirmation';
         
         let lastInspectionText = '';
         if (vehicleData.lastInspection) {
           const lastDate = new Date(vehicleData.lastInspection.inspection_date || vehicleData.lastInspection.timestamp).toLocaleDateString();
-          lastInspectionText = `<p style="color: #2e7d32; font-size: 0.9rem; font-weight: 500;">
-            📅 Last inspection: ${lastDate}
-          </p>`;
+          lastInspectionText = `<p>Last inspection: ${lastDate}</p>`;
         }
         
         popup.innerHTML = `
-          <h3>🚗 Found existing vehicle!</h3>
-          <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-            <p style="margin: 0.5rem 0; font-size: 1.1rem;"><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
-            <p style="margin: 0.5rem 0; color: #666;">${vehicleData.color} • ${vehicleData.license_plate}</p>
-            ${lastInspectionText}
-            <p style="color: #1976d2; font-size: 0.9rem; font-weight: 500;">
-              📊 ${vehicleData.totalInspections} previous inspection${vehicleData.totalInspections !== 1 ? 's' : ''} on record
-            </p>
-          </div>
-          <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Is this the correct vehicle?</p>
+          <h3>Found Existing Vehicle</h3>
+          <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
+          <p>${vehicleData.color} • ${vehicleData.license_plate}</p>
+          ${lastInspectionText}
+          <p>${vehicleData.totalInspections} previous inspections</p>
           <div class="popup-buttons">
-            <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">✅ Yes, this is correct</button>
-            <button class="popup-btn btn-no" onclick="confirmVehicle(false)">❌ No, different vehicle</button>
+            <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">Yes, correct</button>
+            <button class="popup-btn btn-no" onclick="confirmVehicle(false)">No, different</button>
           </div>
         `;
         
@@ -868,25 +618,18 @@
       }
 
       function showNewVehicleConfirmation(vehicleData) {
-        console.log('🆕 Showing new vehicle confirmation:', vehicleData);
-        
         const popup = document.createElement('div');
         popup.className = 'vehicle-popup';
-        popup.id = 'new-vehicle-confirmation';
+        popup.id = 'vehicle-confirmation';
         
         popup.innerHTML = `
-          <h3>🆕 New vehicle detected</h3>
-          <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-            <p style="margin: 0.5rem 0; font-size: 1.1rem;"><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
-            <p style="margin: 0.5rem 0; color: #666;">${vehicleData.color} • ${vehicleData.license_plate}</p>
-            <p style="color: #ed6c02; font-size: 0.9rem; font-weight: 500;">
-              📝 This will be your first inspection of this vehicle
-            </p>
-          </div>
-          <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Does this look correct?</p>
+          <h3>New Vehicle Detected</h3>
+          <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
+          <p>${vehicleData.color} • ${vehicleData.license_plate}</p>
+          <p>First inspection for this vehicle</p>
           <div class="popup-buttons">
-            <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">✅ Yes, add to my vehicles</button>
-            <button class="popup-btn btn-no" onclick="confirmVehicle(false)">❌ No, let me correct this</button>
+            <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">Add vehicle</button>
+            <button class="popup-btn btn-no" onclick="confirmVehicle(false)">Correct info</button>
           </div>
         `;
         
@@ -895,59 +638,36 @@
       }
 
       function showSimpleVehicleEntry() {
-        console.log('Showing simple vehicle entry');
-        
         const popup = document.createElement('div');
         popup.className = 'vehicle-popup';
-        popup.id = 'simple-vehicle-entry';
+        popup.id = 'vehicle-entry';
         popup.innerHTML = `
-          <h3>📝 Confirm Vehicle Details</h3>
-          <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Please enter your vehicle information:</p>
+          <h3>Enter Vehicle Details</h3>
           <div class="manual-form">
             <div class="form-row">
-              <div>
-                <label>License Plate</label>
-                <input type="text" id="manual-plate" placeholder="ABC123" required>
-              </div>
+              <div><label>License Plate</label><input type="text" id="manual-plate" placeholder="ABC123"></div>
             </div>
             <div class="form-row">
-              <div>
-                <label>Make</label>
-                <input type="text" id="manual-make" placeholder="Toyota" required>
-              </div>
-              <div>
-                <label>Model</label>
-                <input type="text" id="manual-model" placeholder="Camry" required>
-              </div>
+              <div><label>Make</label><input type="text" id="manual-make" placeholder="Toyota"></div>
+              <div><label>Model</label><input type="text" id="manual-model" placeholder="Camry"></div>
             </div>
             <div class="form-row">
-              <div>
-                <label>Year</label>
-                <input type="number" id="manual-year" min="1990" max="2025" placeholder="2023" required>
-              </div>
-              <div>
-                <label>Color</label>
-                <input type="text" id="manual-color" placeholder="Silver" required>
-              </div>
+              <div><label>Year</label><input type="number" id="manual-year" placeholder="2023"></div>
+              <div><label>Color</label><input type="text" id="manual-color" placeholder="Silver"></div>
             </div>
           </div>
           <div class="popup-buttons">
-            <button class="popup-btn btn-yes" onclick="saveVehicleDetails()">💾 Save & Continue</button>
+            <button class="popup-btn btn-yes" onclick="saveVehicleDetails()">Save</button>
           </div>
         `;
         
         document.body.appendChild(popup);
       }
 
-      // Global functions for popups
+      // Global popup functions
       window.confirmVehicle = async function(confirmed) {
-        console.log('🚗 Vehicle confirmation:', confirmed);
-        
-        const popups = ['vehicle-history-confirmation', 'new-vehicle-confirmation'];
-        popups.forEach(id => {
-          const popup = document.getElementById(id);
-          if (popup) popup.remove();
-        });
+        const popup = document.getElementById('vehicle-confirmation');
+        if (popup) popup.remove();
         
         if (confirmed) {
           vehicleInfo = detectedVehicle;
@@ -957,20 +677,18 @@
           
           const isNew = detectedVehicle.totalInspections === 0;
           statusBar.textContent = isNew ? 
-            "✅ New vehicle added - first inspection" : 
+            "✅ New vehicle added" : 
             `✅ Vehicle confirmed - inspection #${detectedVehicle.totalInspections + 1}`;
           
           currentStep = 0;
           updateStep();
           nextButton.disabled = false;
         } else {
-          console.log('❌ User says vehicle info is wrong');
           showSimpleVehicleEntry();
         }
       };
 
       window.saveVehicleDetails = async function() {
-        console.log('💾 Saving vehicle details...');
         const make = document.getElementById('manual-make').value.trim();
         const model = document.getElementById('manual-model').value.trim();
         const year = parseInt(document.getElementById('manual-year').value.trim());
@@ -978,37 +696,32 @@
         const license_plate = document.getElementById('manual-plate').value.trim();
         
         if (!make || !model || !year || !color || !license_plate) {
-          alert('Please fill in all fields');
+          alert('Please fill all fields');
           return;
         }
         
-        const manualVehicle = { make, model, year, color, license_plate, confidence: 1.0 };
-        const existingVehicle = findExistingVehicle(manualVehicle);
+        const existingVehicle = await checkSpecificVehicle(license_plate);
         
         if (existingVehicle) {
-          console.log('📋 Manual entry matches existing vehicle');
           detectedVehicle = {
-            ...manualVehicle,
+            make, model, year, color, license_plate,
             id: existingVehicle.id,
             inspectionHistory: existingVehicle.inspectionHistory || [],
             totalInspections: existingVehicle.inspectionHistory?.length || 0
           };
-          vehicleInfo = detectedVehicle;
-          currentVehicleId = detectedVehicle.id;
           statusBar.textContent = `✅ Vehicle found - inspection #${detectedVehicle.totalInspections + 1}`;
         } else {
-          console.log('🆕 Creating new vehicle from manual entry');
-          detectedVehicle = manualVehicle;
+          detectedVehicle = { make, model, year, color, license_plate };
           detectedVehicle.id = generateUUID();
           detectedVehicle.inspectionHistory = [];
           detectedVehicle.totalInspections = 0;
-          vehicleInfo = detectedVehicle;
-          currentVehicleId = detectedVehicle.id;
-          
-          statusBar.textContent = "✅ New vehicle created - first inspection";
+          statusBar.textContent = "✅ New vehicle created";
         }
         
-        const popup = document.getElementById('simple-vehicle-entry');
+        vehicleInfo = detectedVehicle;
+        currentVehicleId = detectedVehicle.id;
+        
+        const popup = document.getElementById('vehicle-entry');
         if (popup) popup.remove();
         
         await createInspection();
@@ -1018,67 +731,11 @@
         nextButton.disabled = false;
       };
 
-      // Create inspection in Supabase
-      async function createInspection() {
-        try {
-          if (!supabase) {
-            console.log('No Supabase connection, skipping database operations');
-            currentInspectionId = generateUUID();
-            return;
-          }
-
-          console.log('Creating inspection in Supabase...');
-          
-          const { data: existingVehicle, error: vehicleCheckError } = await supabase
-            .from('vehicles')
-            .select('id')
-            .eq('id', currentVehicleId)
-            .single();
-
-          if (vehicleCheckError && vehicleCheckError.code === 'PGRST116') {
-            console.log('Creating new vehicle in database...');
-            const { error: vehicleError } = await supabase
-              .from('vehicles')
-              .insert({
-                id: currentVehicleId,
-                user_id: currentUser.id,
-                make: vehicleInfo.make,
-                model: vehicleInfo.model,
-                year: vehicleInfo.year,
-                license_plate: vehicleInfo.license_plate,
-                created_at: new Date().toISOString()
-              });
-
-            if (vehicleError) throw vehicleError;
-            console.log('✅ Vehicle created in database');
-          }
-
-          currentInspectionId = generateUUID();
-          const { error: inspectionError } = await supabase
-            .from('inspections')
-            .insert({
-              id: currentInspectionId,
-              vehicle_id: currentVehicleId,
-              user_id: currentUser.id,
-              inspection_date: new Date().toISOString(),
-              status: 'pending',
-              notes: isTestMode ? 'Test inspection' : null
-            });
-
-          if (inspectionError) throw inspectionError;
-          
-          console.log('✅ Inspection created in database:', currentInspectionId);
-          
-        } catch (error) {
-          console.error('❌ Error creating inspection:', error);
-          currentInspectionId = generateUUID();
-        }
-      }
-
-      // Upload to R2
+      // Upload to R2 with enterprise structure
       async function uploadToR2() {
         try {
-          statusBar.textContent = "📤 Uploading photo...";
+          const step = steps[currentStep];
+          statusBar.textContent = `📤 Uploading ${step.category} photo...`;
           
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
@@ -1092,10 +749,11 @@
               return;
             }
             
-            const stepName = steps[currentStep];
+            const stepName = step.name;
+            const stepNumber = currentStep + 1;
             const fileName = `${stepName}_${currentVehicleId}.jpg`;
             
-            console.log('Uploading file:', fileName);
+            console.log(`📤 Uploading: Step ${stepNumber} (${Math.round(blob.size / 1024)} KB)`);
 
             try {
               const formData = new FormData();
@@ -1104,7 +762,7 @@
               formData.append('vehicleId', currentVehicleId);
               formData.append('inspectionId', currentInspectionId);
               formData.append('stepName', stepName);
-              formData.append('stepNumber', currentStep + 1);
+              formData.append('stepNumber', stepNumber);
               formData.append('userId', currentUser.id);
 
               const response = await fetch('/.netlify/functions/upload-to-r2', {
@@ -1116,11 +774,13 @@
                 const result = await response.json();
                 
                 const fileInfo = {
-                  step: currentStep + 1,
+                  step: stepNumber,
                   stepName: stepName,
-                  fileName: fileName,
+                  fileName: result.fileName,
                   url: result.url,
                   cloudflare_path: result.path,
+                  subFolder: result.subFolder,
+                  category: step.category,
                   type: "photo",
                   timestamp: new Date().toISOString(),
                   fileSize: Math.round(blob.size / 1024) + " KB",
@@ -1130,29 +790,29 @@
                 
                 uploadedFiles.push(fileInfo);
 
-                statusBar.textContent = `✅ Photo uploaded! (${Math.round(blob.size / 1024)} KB)`;
+                statusBar.textContent = `✅ ${step.category} photo uploaded to ${result.subFolder}!`;
                 nextButton.disabled = false;
-                console.log('Upload successful:', result.url);
+                console.log('✅ Upload successful:', result.path);
               } else {
                 throw new Error(`Upload failed: ${response.status}`);
               }
             } catch (uploadError) {
-              console.error('R2 upload failed:', uploadError);
-              statusBar.textContent = "⚠️ Upload failed - continuing anyway";
+              console.error('❌ Upload failed:', uploadError);
+              statusBar.textContent = "⚠️ Upload failed - continuing";
               nextButton.disabled = false;
             }
           }, 'image/jpeg', 0.8);
           
         } catch (error) {
-          console.error('Upload error:', error);
-          statusBar.textContent = "⚠️ Upload error - continuing anyway";
+          console.error('❌ Upload error:', error);
+          statusBar.textContent = "⚠️ Upload error - continuing";
           nextButton.disabled = false;
         }
       }
 
       // Capture photo
       function capturePhoto() {
-        console.log('Capturing photo...');
+        console.log('📸 Capturing photo...');
         
         flashEffect.classList.add("active");
         setTimeout(() => flashEffect.classList.remove("active"), 100);
@@ -1166,136 +826,42 @@
 
       // Next step
       function nextStep() {
-        console.log('Next step...');
+        console.log('➡️ Next step...');
         if (currentStep < steps.length - 1) {
           currentStep++;
           updateStep();
         } else {
-          stepInstruction.textContent = "🎉 Inspection completed! Processing...";
+          stepInstruction.textContent = "🎉 Inspection completed!";
           nextButton.style.display = "none";
           photoButton.style.display = "none";
-          statusBar.textContent = "Finalizing inspection...";
+          statusBar.textContent = "✅ All photos uploaded to enterprise cloud!";
           
-          completeInspection();
+          console.log('✅ Inspection complete:', uploadedFiles.length, 'files uploaded');
         }
-      }
-
-      // Complete inspection
-      async function completeInspection() {
-        try {
-          if (supabase && currentInspectionId) {
-            const { error } = await supabase
-              .from('inspections')
-              .update({ 
-                status: 'complete',
-                notes: `Inspection completed with ${uploadedFiles.length} photos`
-              })
-              .eq('id', currentInspectionId);
-
-            if (error) throw error;
-            console.log('✅ Inspection marked as complete in database');
-          }
-
-          const vehicleText = vehicleInfo.make ? 
-            `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}` : 
-            "Vehicle";
-          stepInstruction.textContent = `✅ ${vehicleText} inspection completed!`;
-          statusBar.textContent = `Complete! ${uploadedFiles.length} photos uploaded 🎉`;
-          
-        } catch (error) {
-          console.error('Error completing inspection:', error);
-          stepInstruction.textContent = "⚠️ Inspection completed but database update failed";
-          statusBar.textContent = "Inspection complete - data saved locally";
-        }
-      }
-
-      // Lighting check
-      function checkLighting() {
-        if (!inspectionStarted || video.readyState < 2) return;
-
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        canvas.width = video.videoWidth || 100;
-        canvas.height = video.videoHeight || 100;
-
-        if (video.videoWidth > 0) {
-          ctx.drawImage(video, 0, 0);
-          const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          let total = 0;
-
-          for (let i = 0; i < frame.data.length; i += 4) {
-            const brightness =
-              0.299 * frame.data[i] +
-              0.587 * frame.data[i + 1] +
-              0.114 * frame.data[i + 2];
-            total += brightness;
-          }
-
-          const avg = total / (frame.data.length / 4);
-          const lightOK = avg > 30 && avg < 200;
-
-          if (currentStep === -1) {
-            if (!statusBar.textContent.includes("✅") && !statusBar.textContent.includes("📤") && !statusBar.textContent.includes("🔍")) {
-              statusBar.textContent = `Lighting: ${lightOK ? "🟢 Good" : "🟡 Check"} | License plate detection ready`;
-            }
-          } else if (!statusBar.textContent.includes("✅") && !statusBar.textContent.includes("📤")) {
-            statusBar.textContent = `Lighting: ${lightOK ? "🟢 Good" : "🟡 Check"} | Ready for photo`;
-          }
-        }
-      }
-
-      function loopStatus() {
-        checkLighting();
-        requestAnimationFrame(loopStatus);
       }
 
       // Event listeners
-      // User selection buttons
       document.getElementById('user1-btn').addEventListener('click', () => selectUser(1));
       document.getElementById('user2-btn').addEventListener('click', () => selectUser(2));
       document.getElementById('user3-btn').addEventListener('click', () => selectUser(3));
       
-      startInspectionBtn.addEventListener("click", function() {
-        console.log('Start button clicked!');
-        startInspection();
-      });
-
-      testModeBtn.addEventListener("click", function() {
-        console.log('Test button clicked!');
-        startTestMode();
-      });
-
-      backToUsersBtn.addEventListener("click", function() {
-        console.log('Back to users clicked!');
-        backToUserSelection();
-      });
-
-      photoButton.addEventListener("click", function() {
-        console.log('Photo button clicked!');
-        capturePhoto();
-      });
-
-      nextButton.addEventListener("click", function() {
-        console.log('Next button clicked!');
-        nextStep();
-      });
+      document.getElementById('start-inspection-btn').addEventListener("click", startInspection);
+      document.getElementById('test-mode-btn').addEventListener("click", startTestMode);
+      document.getElementById('back-to-users-btn').addEventListener("click", backToUserSelection);
+      document.getElementById('photo-button').addEventListener("click", capturePhoto);
+      document.getElementById('next-button').addEventListener("click", nextStep);
 
       // Initialize
-      console.log('Setting up app...');
-      console.log('currentUser before init:', typeof currentUser);
-      
+      console.log('🏢 Initializing enterprise functions...');
       initSupabase().then(() => {
-        console.log('currentUser after init:', currentUser);
         startCamera();
-        loopStatus();
-        console.log('Setup complete!');
+        console.log('✅ Enterprise functions ready!');
       }).catch(error => {
-        console.error('Setup failed:', error);
-        currentUser = { id: 'fallback-user', email: 'fallback@test.com' };
+        console.error('❌ Setup failed:', error);
         startCamera();
-        loopStatus();
-        console.log('Setup complete with fallback!');
+        console.log('⚠️ Running in offline mode');
       });
+
     </script>
   </body>
 </html>
