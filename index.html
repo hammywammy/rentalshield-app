@@ -32,7 +32,8 @@
         background: #000;
       }
       
-      #start-screen {
+      /* User selection screen */
+      #user-selection-screen {
         position: fixed;
         top: 0;
         left: 0;
@@ -41,6 +42,73 @@
         background: #000000;
         color: white;
         display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        z-index: 100;
+        padding: 2rem;
+      }
+      
+      #user-selection-screen h1 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        font-weight: 700;
+      }
+      
+      #user-selection-screen p {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        opacity: 0.9;
+      }
+      
+      .user-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+        max-width: 400px;
+      }
+      
+      .user-btn {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #1976d2, #1565c0);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: left;
+      }
+      
+      .user-btn:hover {
+        background: linear-gradient(135deg, #1565c0, #0d47a1);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(25, 118, 210, 0.3);
+      }
+      
+      .user-info strong {
+        display: block;
+        font-size: 1.3rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      .user-info small {
+        display: block;
+        opacity: 0.8;
+        font-size: 0.9rem;
+        margin-bottom: 0.2rem;
+      }
+      
+      #start-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #000000;
+        color: white;
+        display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;
@@ -346,8 +414,37 @@
     <video id="video" autoplay muted playsinline></video>
     <div id="flash-effect" class="flash-effect"></div>
 
+    <!-- User Selection Screen -->
+    <div id="user-selection-screen">
+      <h1>🚗 Select Test User</h1>
+      <p>Choose which test user account to use:</p>
+      <div class="user-buttons">
+        <button id="user1-btn" class="user-btn" data-user="1">
+          <div class="user-info">
+            <strong>👤 User 1</strong>
+            <small>user1@test.com</small>
+            <small>Has existing vehicles: Toyota Camry, Honda Civic</small>
+          </div>
+        </button>
+        <button id="user2-btn" class="user-btn" data-user="2">
+          <div class="user-info">
+            <strong>👤 User 2</strong>
+            <small>user2@test.com</small>
+            <small>Clean account - no vehicles</small>
+          </div>
+        </button>
+        <button id="user3-btn" class="user-btn" data-user="3">
+          <div class="user-info">
+            <strong>👤 User 3</strong>
+            <small>user3@test.com</small>
+            <small>Clean account - no vehicles</small>
+          </div>
+        </button>
+      </div>
+    </div>
+
     <!-- Start Screen -->
-    <div id="start-screen">
+    <div id="start-screen" style="display: none;">
       <h1>🚗 Car Inspection</h1>
       <p>Welcome to the vehicle inspection app.<br><br>
       <strong>Instructions:</strong><br>
@@ -356,6 +453,7 @@
       • Each photo will be automatically uploaded and analyzed</p>
       <button id="start-inspection-btn" class="btn">Start Inspection</button>
       <button id="test-mode-btn" class="btn btn-test">🧪 Test Mode</button>
+      <button id="back-to-users-btn" class="btn" style="background: #666; margin-top: 1rem;">← Back to User Selection</button>
     </div>
 
     <!-- Status and Controls -->
@@ -367,6 +465,25 @@
     <script>
       console.log('Script starting...');
       
+      // Test users configuration
+      const TEST_USERS = {
+        1: {
+          id: '11111111-1111-1111-1111-111111111111',
+          email: 'user1@test.com',
+          name: 'Test User 1'
+        },
+        2: {
+          id: '22222222-2222-2222-2222-222222222222',
+          email: 'user2@test.com', 
+          name: 'Test User 2'
+        },
+        3: {
+          id: '33333333-3333-3333-3333-333333333333',
+          email: 'user3@test.com',
+          name: 'Test User 3'
+        }
+      };
+
       // Global variables - declared once
       let supabase = null;
       let currentUser = null;
@@ -407,12 +524,15 @@
       const stepInstruction = document.getElementById("step-instruction");
       const nextButton = document.getElementById("next-button");
       const photoButton = document.getElementById("photo-button");
+      const userSelectionScreen = document.getElementById("user-selection-screen");
       const startScreen = document.getElementById("start-screen");
       const startInspectionBtn = document.getElementById("start-inspection-btn");
       const testModeBtn = document.getElementById("test-mode-btn");
+      const backToUsersBtn = document.getElementById("back-to-users-btn");
       const flashEffect = document.getElementById("flash-effect");
 
       console.log('Elements found:', {
+        userSelectionScreen: !!userSelectionScreen,
         startInspectionBtn: !!startInspectionBtn,
         testModeBtn: !!testModeBtn,
         photoButton: !!photoButton,
@@ -428,15 +548,38 @@
           supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
           console.log('✅ Supabase initialized');
           
-          currentUser = { 
-            id: 'test-user-' + Date.now(), 
-            email: 'test@example.com' 
-          };
-          console.log('✅ Using test user:', currentUser.email);
         } catch (error) {
           console.error('❌ Supabase initialization failed:', error);
-          currentUser = { id: 'offline-user', email: 'offline@example.com' };
         }
+      }
+
+      // Select user function
+      function selectUser(userNumber) {
+        currentUser = TEST_USERS[userNumber];
+        console.log('✅ Selected user:', currentUser.name, currentUser.email);
+        
+        userSelectionScreen.style.display = "none";
+        startScreen.style.display = "flex";
+        
+        // Load vehicles for this user
+        loadUserVehicles();
+      }
+
+      // Back to user selection
+      function backToUserSelection() {
+        startScreen.style.display = "none";
+        userSelectionScreen.style.display = "flex";
+        currentUser = null;
+        
+        // Reset any inspection state
+        inspectionStarted = false;
+        currentStep = -1;
+        vehicleInfo = null;
+        detectedVehicle = null;
+        uploadedFiles = [];
+        userVehicles = [];
+        currentVehicleId = null;
+        currentInspectionId = null;
       }
 
       // Start camera
@@ -1096,6 +1239,11 @@
       }
 
       // Event listeners
+      // User selection buttons
+      document.getElementById('user1-btn').addEventListener('click', () => selectUser(1));
+      document.getElementById('user2-btn').addEventListener('click', () => selectUser(2));
+      document.getElementById('user3-btn').addEventListener('click', () => selectUser(3));
+      
       startInspectionBtn.addEventListener("click", function() {
         console.log('Start button clicked!');
         startInspection();
@@ -1104,6 +1252,11 @@
       testModeBtn.addEventListener("click", function() {
         console.log('Test button clicked!');
         startTestMode();
+      });
+
+      backToUsersBtn.addEventListener("click", function() {
+        console.log('Back to users clicked!');
+        backToUserSelection();
       });
 
       photoButton.addEventListener("click", function() {
