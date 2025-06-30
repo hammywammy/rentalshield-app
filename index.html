@@ -304,17 +304,15 @@
             currentUser = user;
             console.log('User authenticated:', user.email);
           } else {
-            console.log('No user authenticated');
-            // Redirect to auth page (uncomment when ready)
-            // window.location.href = '/auth.html';
+            console.log('No user authenticated - redirecting to login');
+            window.location.href = '/auth.html';
           }
         });
         
         netlifyIdentity.init();
       } else {
-        console.log('Netlify Identity not available - running without auth');
-        // Fallback for testing
-        currentUser = { id: 'test-user', email: 'test@example.com' };
+        console.log('Netlify Identity not available - redirecting to login');
+        window.location.href = '/auth.html';
       }
       
       const steps = [
