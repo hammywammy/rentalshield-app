@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+// Using built-in fetch (Node.js 18+)
 
 exports.handler = async (event, context) => {
   // Handle CORS
