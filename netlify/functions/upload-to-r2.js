@@ -7,7 +7,14 @@ export const handler = async (event) => {
   
   // Create folder structure
   const folderPath = `users/${userId}/vehicles/${vehicleId}/inspections/${inspectionId}`;
-  const fileName = `${stepName}_${vehicleId}.jpg`;
+  // In netlify/functions/upload-to-r2.js - REPLACE the fileName line
+const stepName = formData.get('stepName');
+const stepNumber = parseInt(formData.get('stepNumber'));
+const vehicleId = formData.get('vehicleId');
+
+// OLD: const fileName = `${stepName}_${vehicleId}.jpg`;
+// NEW: 
+const fileName = `step-${stepNumber.toString().padStart(2, '0')}_${stepName.replace(/_/g, '-')}.jpg`;
   const fullPath = `${folderPath}/${fileName}`;
   
   // Upload to R2
