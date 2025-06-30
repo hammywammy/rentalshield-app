@@ -294,65 +294,92 @@
     <script>
       console.log('Script starting...');
       
-      // FIXED Mobile authentication - stops checking after login
+      // FIXED Mobile authentication - handles URL redirects properly
       let currentUser = null;
       let authChecked = false;
-      let loginSuccessful = false; // NEW: Track if login was successful
+      let loginSuccessful = false;
       let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       console.log('Device type:', isMobile ? 'Mobile' : 'Desktop');
+      console.log('Current URL:', window.location.href);
+      
+      // Check if we're coming back from a login redirect
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasAuthCallback = urlParams.has('access_token') || 
+                             urlParams.has('confirmation_token') || 
+                             window.location.hash.includes('access_token');
+      
+      if (hasAuthCallback) {
+        console.log('🔄 Detected auth callback in URL - waiting for login completion');
+        loginSuccessful = true; // Prevent immediate redirect
+      }
       
       // Check for authentication when page loads
       if (window.netlifyIdentity) {
         
-        // Handle successful login FIRST - this stops all other checks
+        // Handle successful login
         netlifyIdentity.on('login', user => {
           console.log('✅ LOGIN SUCCESS:', user.email);
           currentUser = user;
-          loginSuccessful = true; // STOP all future auth checks
+          loginSuccessful = true;
           authChecked = true;
           
-          // DO NOT redirect, just stay logged in
-          console.log('📱 Staying on current page after login');
+          // Clean up URL if it has auth parameters
+          if (hasAuthCallback) {
+            console.log('🧹 Cleaning up URL after login');
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, '', cleanUrl);
+          }
+          
+          console.log('📱 Login complete - staying on app');
         });
         
         netlifyIdentity.on('init', user => {
           console.log('🔐 Netlify Identity initialized');
+          console.log('📊 User from init:', user ? user.email : 'none');
           
-          // ONLY check auth if login hasn't already succeeded
-          if (!loginSuccessful) {
-            setTimeout(() => {
-              checkAuthOnce();
-            }, isMobile ? 2000 : 1000);
-          }
+          // If we have auth callback, wait longer for login to process
+          const delay = hasAuthCallback ? 5000 : (isMobile ? 2000 : 1000);
+          
+          setTimeout(() => {
+            checkAuthOnce();
+          }, delay);
         });
         
-        // Simple one-time auth check - NO RETRIES
+        // Check auth state once
         function checkAuthOnce() {
-          // If login already succeeded, do nothing
           if (loginSuccessful) {
             console.log('✅ Login already successful, skipping auth check');
             return;
           }
           
           const user = netlifyIdentity.currentUser();
+          console.log('🔍 Auth check - user found:', user ? user.email : 'none');
+          
           if (user) {
             console.log('✅ User already logged in:', user.email);
             currentUser = user;
             authChecked = true;
+            loginSuccessful = true;
+          } else if (hasAuthCallback) {
+            console.log('⏳ Auth callback detected but no user yet - waiting longer...');
+            // Wait even longer for auth callback to complete
+            setTimeout(() => {
+              const retryUser = netlifyIdentity.currentUser();
+              if (retryUser) {
+                console.log('✅ User found on retry:', retryUser.email);
+                currentUser = retryUser;
+                loginSuccessful = true;
+              } else {
+                console.log('❌ Auth callback failed, redirecting');
+                window.location.href = '/auth.html';
+              }
+            }, 3000);
           } else {
-            console.log('❌ No user found, redirecting to auth');
+            console.log('❌ No user found and no auth callback, redirecting');
             window.location.href = '/auth.html';
           }
         }
-        
-        // Handle logout
-        netlifyIdentity.on('logout', () => {
-          console.log('🚪 User logged out');
-          currentUser = null;
-          loginSuccessful = false;
-          window.location.href = '/auth.html';
-        });
         
         netlifyIdentity.init();
         
