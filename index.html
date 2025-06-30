@@ -294,16 +294,19 @@
     <script>
       console.log('Script starting...');
       
-      // Authentication setup with delay
+      // Authentication setup with mobile support
       let currentUser = null;
       let authChecked = false;
+      let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       // Check for authentication when page loads
       if (window.netlifyIdentity) {
         netlifyIdentity.on('init', user => {
-          console.log('Netlify Identity initialized');
+          console.log('Netlify Identity initialized, mobile:', isMobile);
           
-          // Wait a moment for any pending login to complete
+          // Different delay for mobile vs desktop
+          const delay = isMobile ? 3000 : 2000;
+          
           setTimeout(() => {
             currentUser = netlifyIdentity.currentUser();
             authChecked = true;
@@ -314,14 +317,34 @@
               console.log('No user found - redirecting to auth');
               window.location.href = '/auth.html';
             }
-          }, 2000); // 2 second delay to let login complete
+          }, delay);
         });
         
         // Handle successful login
         netlifyIdentity.on('login', user => {
           console.log('Login successful:', user.email);
           currentUser = user;
-          // Stay on current page after login
+          
+          if (isMobile) {
+            // On mobile, explicitly redirect back to main app after login
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 1000);
+          }
+        });
+        
+        // Handle when user closes login popup (mobile)
+        netlifyIdentity.on('close', () => {
+          console.log('Login popup closed');
+          // Check if user actually logged in
+          setTimeout(() => {
+            const user = netlifyIdentity.currentUser();
+            if (user && !currentUser) {
+              console.log('User logged in after popup closed');
+              currentUser = user;
+              window.location.reload(); // Refresh to start fresh
+            }
+          }, 500);
         });
         
         netlifyIdentity.init();
