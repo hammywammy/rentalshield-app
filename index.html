@@ -294,63 +294,103 @@
     <script>
       console.log('Script starting...');
       
-      // Authentication setup with mobile support
+      // Mobile-first authentication setup
       let currentUser = null;
       let authChecked = false;
       let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      let authRetryCount = 0;
+      const MAX_AUTH_RETRIES = 3;
+      
+      console.log('Device type:', isMobile ? 'Mobile' : 'Desktop');
       
       // Check for authentication when page loads
       if (window.netlifyIdentity) {
-        netlifyIdentity.on('init', user => {
-          console.log('Netlify Identity initialized, mobile:', isMobile);
+        
+        // On mobile, check auth state multiple times with longer delays
+        function checkAuthState() {
+          console.log(`Auth check attempt ${authRetryCount + 1}/${MAX_AUTH_RETRIES}`);
           
-          // Different delay for mobile vs desktop
-          const delay = isMobile ? 3000 : 2000;
-          
-          setTimeout(() => {
-            currentUser = netlifyIdentity.currentUser();
+          const user = netlifyIdentity.currentUser();
+          if (user) {
+            console.log('✅ User found:', user.email);
+            currentUser = user;
             authChecked = true;
-            
-            if (currentUser) {
-              console.log('User authenticated:', currentUser.email);
-            } else {
-              console.log('No user found - redirecting to auth');
-              window.location.href = '/auth.html';
-            }
-          }, delay);
+            return true;
+          }
+          
+          authRetryCount++;
+          if (authRetryCount < MAX_AUTH_RETRIES) {
+            console.log('❌ No user found, retrying...');
+            setTimeout(checkAuthState, isMobile ? 2000 : 1000);
+            return false;
+          } else {
+            console.log('❌ Max retries reached, redirecting to auth');
+            authChecked = true;
+            window.location.href = '/auth.html';
+            return false;
+          }
+        }
+        
+        netlifyIdentity.on('init', user => {
+          console.log('🔐 Netlify Identity initialized');
+          
+          // Start checking auth state with delay
+          setTimeout(() => {
+            checkAuthState();
+          }, isMobile ? 3000 : 1500);
         });
         
         // Handle successful login
         netlifyIdentity.on('login', user => {
-          console.log('Login successful:', user.email);
+          console.log('✅ Login successful:', user.email);
           currentUser = user;
+          authChecked = true;
           
+          // On mobile, force page reload to ensure clean state
           if (isMobile) {
-            // On mobile, explicitly redirect back to main app after login
+            console.log('📱 Mobile login detected, reloading...');
             setTimeout(() => {
               window.location.href = '/';
             }, 1000);
           }
         });
         
-        // Handle when user closes login popup (mobile)
-        netlifyIdentity.on('close', () => {
-          console.log('Login popup closed');
-          // Check if user actually logged in
-          setTimeout(() => {
-            const user = netlifyIdentity.currentUser();
-            if (user && !currentUser) {
-              console.log('User logged in after popup closed');
-              currentUser = user;
-              window.location.reload(); // Refresh to start fresh
-            }
-          }, 500);
+        // Handle logout
+        netlifyIdentity.on('logout', () => {
+          console.log('🚪 User logged out');
+          currentUser = null;
+          window.location.href = '/auth.html';
         });
         
+        // Mobile-specific: Handle popup events
+        if (isMobile) {
+          netlifyIdentity.on('open', () => {
+            console.log('📱 Login popup opened');
+          });
+          
+          netlifyIdentity.on('close', () => {
+            console.log('📱 Login popup closed');
+            // Give extra time for mobile to process login
+            setTimeout(() => {
+              const user = netlifyIdentity.currentUser();
+              if (user && !currentUser) {
+                console.log('📱 Late login detection, refreshing...');
+                window.location.reload();
+              } else if (!user && !currentUser) {
+                console.log('📱 No login detected after popup close');
+                // Don't redirect immediately, user might try again
+              }
+            }, 2000);
+          });
+        }
+        
         netlifyIdentity.init();
+        
       } else {
-        console.log('Netlify Identity not available');
-        currentUser = { id: 'test-user', email: 'test@example.com' }; // Fallback for testing
+        console.log('❌ Netlify Identity not available');
+        // Fallback for development
+        currentUser = { id: 'test-user', email: 'test@example.com' };
+        authChecked = true;
       }
       
       const steps = [
@@ -473,13 +513,14 @@
       }
 
       // Start inspection
-      function startInspection() {
+      async function startInspection() {
         console.log('Starting inspection...');
         isTestMode = false;
         inspectionStarted = true;
         
-        // Load user's previous vehicles
-        loadUserVehicles();
+        // Load user's vehicles and ensure user folder exists
+        await loadUserVehicles();
+        await ensureUserFolder();
         
         startScreen.style.display = "none";
         statusBar.style.display = "block";
@@ -489,6 +530,39 @@
         
         currentStep = -1; // Start with license plate
         updateStep();
+      }
+
+      // Ensure user folder structure exists in R2
+      async function ensureUserFolder() {
+        try {
+          if (!currentUser || !currentUser.id) {
+            console.log('No user ID available for folder creation');
+            return;
+          }
+
+          console.log('Ensuring user folder exists for:', currentUser.id);
+          
+          const response = await fetch('/.netlify/functions/create-user-folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: currentUser.id,
+              userEmail: currentUser.email,
+              folderPath: `rental-shield/users/${currentUser.id}/`,
+              createSubfolders: ['vehicles', 'profile']
+            })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('User folder structure created:', result);
+          } else {
+            console.log('User folder creation failed, but continuing...');
+          }
+        } catch (error) {
+          console.error('Error creating user folder:', error);
+          // Continue anyway - don't block the user
+        }
       }
 
       // Test mode
