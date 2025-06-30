@@ -631,22 +631,46 @@
       }
 
       function findExistingVehicle(detectedVehicle) {
-        const cleanDetectedPlate = cleanPlate(detectedVehicle.license_plate || detectedVehicle.plate);
+        console.log('🔍 Searching for existing vehicle...');
+        console.log('🤖 GPT detected:', detectedVehicle);
+        console.log('📚 User vehicles in database:', userVehicles);
         
-        return userVehicles.find(vehicle => {
+        const cleanDetectedPlate = cleanPlate(detectedVehicle.license_plate || detectedVehicle.plate);
+        console.log('🧹 Cleaned detected plate:', cleanDetectedPlate);
+        
+        const foundVehicle = userVehicles.find(vehicle => {
           const cleanStoredPlate = cleanPlate(vehicle.license_plate);
+          console.log(`🔍 Comparing "${cleanDetectedPlate}" with stored "${cleanStoredPlate}"`);
           
+          // Exact plate match
           if (cleanDetectedPlate === cleanStoredPlate) {
+            console.log('✅ EXACT PLATE MATCH FOUND!');
             return true;
           }
           
+          // Similar plate + make/model match (handles OCR errors)
           const platesSimilar = cleanDetectedPlate.length >= 3 && 
             cleanStoredPlate.includes(cleanDetectedPlate.substring(0, 3));
           const makeModelMatch = vehicle.make.toLowerCase() === detectedVehicle.make.toLowerCase() &&
             vehicle.model.toLowerCase() === detectedVehicle.model.toLowerCase();
           
-          return platesSimilar && makeModelMatch;
+          console.log(`📋 Similar plate: ${platesSimilar}, Make/Model match: ${makeModelMatch}`);
+          
+          if (platesSimilar && makeModelMatch) {
+            console.log('✅ SIMILAR MATCH FOUND!');
+            return true;
+          }
+          
+          return false;
         });
+        
+        if (foundVehicle) {
+          console.log('🎉 Found existing vehicle:', foundVehicle);
+        } else {
+          console.log('❌ No existing vehicle found');
+        }
+        
+        return foundVehicle;
       }
 
       // Load user vehicles from Supabase
@@ -658,7 +682,7 @@
             return;
           }
           
-          console.log('Loading user vehicles from Supabase...');
+          console.log('🔍 Loading user vehicles for:', currentUser.id);
           const { data, error } = await supabase
             .from('vehicles')
             .select(`
@@ -667,7 +691,10 @@
             `)
             .eq('user_id', currentUser.id);
           
-          if (error) throw error;
+          if (error) {
+            console.error('❌ Error loading vehicles:', error);
+            throw error;
+          }
           
           userVehicles = (data || []).map(vehicle => ({
             ...vehicle,
@@ -675,9 +702,10 @@
             totalInspections: vehicle.inspections?.length || 0
           }));
           
-          console.log('Loaded user vehicles:', userVehicles);
+          console.log('✅ Loaded user vehicles:', userVehicles);
+          console.log('📊 Vehicle details:', userVehicles.map(v => `${v.make} ${v.model} ${v.year} - ${v.license_plate}`));
         } catch (error) {
-          console.error("Couldn't load user vehicles:", error);
+          console.error("❌ Couldn't load user vehicles:", error);
           userVehicles = [];
         }
       }
@@ -785,6 +813,7 @@
           console.log('🤖 GPT-4 Detection result:', result);
           
           if (result.success && result.vehicle) {
+            console.log('🎯 GPT detected vehicle data:', JSON.stringify(result.vehicle, null, 2));
             statusBar.textContent = "✅ Vehicle detected - checking history...";
             
             const existingVehicle = findExistingVehicle(result.vehicle);
@@ -807,7 +836,8 @@
               showNewVehicleConfirmation(result.vehicle);
             }
           } else {
-            console.log('❌ No clear detection - manual entry');
+            console.log('❌ GPT detection failed or returned no vehicle data');
+            console.log('🔄 Full GPT response:', result);
             statusBar.textContent = "🔍 Couldn't detect clearly - please confirm details";
             showSimpleVehicleEntry();
           }
