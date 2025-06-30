@@ -498,16 +498,26 @@
         await triggerInspectionComplete();
       }
 
-      // Update step display
+      // Update step display with vehicle history context
       function updateStep() {
         if (currentStep === -1) {
           stepInstruction.textContent = "📋 Step 0: Take a clear photo of your license plate";
           statusBar.textContent = "📸 License plate detection - Make sure plate is clearly visible";
         } else {
-          const vehicleText = detectedVehicle ? 
-            `${detectedVehicle.make} ${detectedVehicle.model} ${detectedVehicle.year}` : 
-            "Vehicle";
-          stepInstruction.textContent = `${vehicleText} - Step ${currentStep + 1} of ${steps.length}: ${steps[currentStep]}`;
+          let vehicleText = "Vehicle";
+          let inspectionContext = "";
+          
+          if (detectedVehicle) {
+            vehicleText = `${detectedVehicle.make} ${detectedVehicle.model} ${detectedVehicle.year}`;
+            
+            if (detectedVehicle.totalInspections > 0) {
+              inspectionContext = ` (Inspection #${detectedVehicle.totalInspections + 1})`;
+            } else {
+              inspectionContext = " (First inspection)";
+            }
+          }
+          
+          stepInstruction.textContent = `${vehicleText}${inspectionContext} - Step ${currentStep + 1} of ${steps.length}: ${steps[currentStep]}`;
           statusBar.textContent = "📸 Ready to take photo";
         }
         
@@ -532,7 +542,7 @@
         }
       }
 
-      // License plate detection
+      // License plate detection with vehicle history matching
       async function detectLicensePlate() {
         try {
           statusBar.textContent = "🔍 Analyzing license plate...";
@@ -548,9 +558,9 @@
           const imageData = canvas.toDataURL('image/jpeg', 0.8);
           const base64 = imageData.split(',')[1];
           
-          console.log('Calling vehicle detection API...');
+          console.log('🤖 Calling vehicle detection API...');
           
-          // Call your Netlify function with user context
+          // Call your Netlify function for AI detection
           const response = await fetch('/.netlify/functions/detect-vehicle', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -563,76 +573,112 @@
           });
           
           const result = await response.json();
-          console.log('Detection result:', result);
+          console.log('🤖 AI Detection result:', result);
           
-          // Process result silently - only show popup if vehicle detected
+          // Process result and check vehicle history
           if (result.success && result.vehicle && result.vehicle.plate) {
-            // AI successfully detected vehicle info
-            statusBar.textContent = "✅ Vehicle detected - confirming details...";
+            statusBar.textContent = "✅ Vehicle detected - checking history...";
             
-            // Check if this user already has this vehicle in their fleet
-            const existingVehicle = findUserVehicle(result.vehicle);
+            // Check if this vehicle exists in user's history
+            const existingVehicle = findExistingVehicle(result.vehicle);
             
             if (existingVehicle) {
-              // User already has this vehicle - add to existing vehicle
+              // Found existing vehicle - show history confirmation
+              console.log('📋 Found existing vehicle with history');
               result.vehicle.vehicleUUID = existingVehicle.vehicleUUID;
               result.vehicle.inspectionHistory = existingVehicle.inspectionHistory || [];
-              showVehicleConfirmation(result.vehicle, true);
+              result.vehicle.totalInspections = existingVehicle.inspectionHistory?.length || 0;
+              result.vehicle.lastInspection = existingVehicle.inspectionHistory?.length > 0 ? 
+                existingVehicle.inspectionHistory[existingVehicle.inspectionHistory.length - 1] : null;
+              
+              showVehicleHistoryConfirmation(result.vehicle, existingVehicle);
             } else {
-              // New vehicle for this user - will create new vehicle UUID
+              // New vehicle - show new vehicle confirmation
+              console.log('🆕 New vehicle detected');
               result.vehicle.vehicleUUID = generateVehicleUUID();
               result.vehicle.inspectionHistory = [];
-              showVehicleConfirmation(result.vehicle, false);
+              result.vehicle.totalInspections = 0;
+              result.vehicle.lastInspection = null;
+              
+              showNewVehicleConfirmation(result.vehicle);
             }
           } else {
-            // AI couldn't detect vehicle clearly - proceed silently or show manual entry
-            console.log('No clear vehicle detection, proceeding with manual entry');
-            statusBar.textContent = "⚠️ Could not detect vehicle details - manual entry required";
+            // AI couldn't detect vehicle clearly
+            console.log('❌ No clear vehicle detection');
+            statusBar.textContent = "⚠️ Could not detect license plate - manual entry required";
             
-            // Small delay then show manual entry
             setTimeout(() => {
               showManualVehicleEntry();
             }, 1500);
           }
           
         } catch (error) {
-          console.error('License plate detection error:', error);
+          console.error('❌ License plate detection error:', error);
           statusBar.textContent = "⚠️ Detection failed - manual entry required";
           
-          // Show manual entry after error
           setTimeout(() => {
             showManualVehicleEntry();
           }, 1500);
         }
       }
 
-      // Show vehicle confirmation popup for user's fleet
-      function showVehicleConfirmation(vehicleData, isExistingInFleet) {
-        console.log('Showing vehicle confirmation:', vehicleData);
+      // Show vehicle history confirmation for existing vehicles
+      function showVehicleHistoryConfirmation(vehicleData, existingVehicle) {
+        console.log('📋 Showing vehicle history confirmation:', vehicleData);
         
         const popup = document.createElement('div');
         popup.className = 'vehicle-popup';
-        popup.id = 'vehicle-confirmation';
+        popup.id = 'vehicle-history-confirmation';
         
-        let historyText = '';
-        if (isExistingInFleet && vehicleData.inspectionHistory && vehicleData.inspectionHistory.length > 0) {
-          const lastInspection = vehicleData.inspectionHistory[vehicleData.inspectionHistory.length - 1];
-          const inspectionDate = new Date(lastInspection.date).toLocaleDateString();
-          historyText = `<p style="color: #666; font-size: 0.9rem;">Last inspection: ${inspectionDate} (${vehicleData.inspectionHistory.length} total)</p>`;
-        } else if (isExistingInFleet) {
-          historyText = '<p style="color: #666; font-size: 0.9rem;">Found in your fleet (no previous inspections)</p>';
-        } else {
-          historyText = '<p style="color: #666; font-size: 0.9rem;">New vehicle - will be added to your fleet</p>';
+        // Format last inspection date
+        let lastInspectionText = '';
+        if (vehicleData.lastInspection) {
+          const lastDate = new Date(vehicleData.lastInspection.date || vehicleData.lastInspection.timestamp).toLocaleDateString();
+          lastInspectionText = `<p style="color: #2e7d32; font-size: 0.9rem; font-weight: 500;">
+            📅 Last inspection: ${lastDate}
+          </p>`;
         }
         
         popup.innerHTML = `
-          <h3>${isExistingInFleet ? '🚗 Is this your vehicle?' : '🆕 New vehicle detected'}</h3>
-          <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
-          <p>${vehicleData.color} • ${vehicleData.plate}</p>
-          ${historyText}
+          <h3>🚗 Is this your vehicle?</h3>
+          <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+            <p style="margin: 0.5rem 0; font-size: 1.1rem;"><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
+            <p style="margin: 0.5rem 0; color: #666;">${vehicleData.color} • ${vehicleData.plate}</p>
+            ${lastInspectionText}
+            <p style="color: #1976d2; font-size: 0.9rem; font-weight: 500;">
+              📊 ${vehicleData.totalInspections} previous inspection${vehicleData.totalInspections !== 1 ? 's' : ''} on record
+            </p>
+          </div>
           <div class="popup-buttons">
-            <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">✅ Yes</button>
-            <button class="popup-btn btn-no" onclick="confirmVehicle(false)">❌ No</button>
+            <button class="popup-btn btn-yes" onclick="confirmExistingVehicle(true)">✅ Yes, same vehicle</button>
+            <button class="popup-btn btn-no" onclick="confirmExistingVehicle(false)">❌ No, different vehicle</button>
+          </div>
+        `;
+        
+        detectedVehicle = vehicleData;
+        document.body.appendChild(popup);
+      }
+
+      // Show new vehicle confirmation
+      function showNewVehicleConfirmation(vehicleData) {
+        console.log('🆕 Showing new vehicle confirmation:', vehicleData);
+        
+        const popup = document.createElement('div');
+        popup.className = 'vehicle-popup';
+        popup.id = 'new-vehicle-confirmation';
+        
+        popup.innerHTML = `
+          <h3>🆕 New vehicle detected</h3>
+          <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+            <p style="margin: 0.5rem 0; font-size: 1.1rem;"><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
+            <p style="margin: 0.5rem 0; color: #666;">${vehicleData.color} • ${vehicleData.plate}</p>
+            <p style="color: #ed6c02; font-size: 0.9rem; font-weight: 500;">
+              📝 This will be your first inspection of this vehicle
+            </p>
+          </div>
+          <div class="popup-buttons">
+            <button class="popup-btn btn-yes" onclick="confirmNewVehicle(true)">✅ Correct, add to my vehicles</button>
+            <button class="popup-btn btn-no" onclick="confirmNewVehicle(false)">❌ Wrong vehicle info</button>
           </div>
         `;
         
@@ -686,27 +732,53 @@
       }
 
       // Global functions for popup interactions
-      window.confirmVehicle = async function(confirmed) {
-        console.log('Vehicle confirmation:', confirmed);
-        const popup = document.getElementById('vehicle-confirmation');
+      window.confirmExistingVehicle = async function(confirmed) {
+        console.log('🚗 Existing vehicle confirmation:', confirmed);
+        const popup = document.getElementById('vehicle-history-confirmation');
         if (popup) popup.remove();
         
         if (confirmed) {
+          // User confirmed this is the same vehicle - add new inspection to existing history
           vehicleInfo = detectedVehicle;
           currentVehicleId = detectedVehicle.vehicleUUID;
-          console.log('Using vehicle UUID:', currentVehicleId);
+          console.log('✅ Adding inspection to existing vehicle:', currentVehicleId);
+          console.log('📊 Previous inspections:', detectedVehicle.totalInspections);
           
-          statusBar.textContent = "✅ Vehicle confirmed - ready for inspection";
+          statusBar.textContent = `✅ Vehicle confirmed - inspection #${detectedVehicle.totalInspections + 1}`;
           currentStep = 0;
           updateStep();
           nextButton.disabled = false;
         } else {
+          // User says this is a different vehicle - show manual entry
+          console.log('❌ User says this is different vehicle');
+          showManualVehicleEntry();
+        }
+      };
+
+      window.confirmNewVehicle = async function(confirmed) {
+        console.log('🆕 New vehicle confirmation:', confirmed);
+        const popup = document.getElementById('new-vehicle-confirmation');
+        if (popup) popup.remove();
+        
+        if (confirmed) {
+          // User confirmed new vehicle info is correct
+          vehicleInfo = detectedVehicle;
+          currentVehicleId = detectedVehicle.vehicleUUID;
+          console.log('✅ Creating new vehicle record:', currentVehicleId);
+          
+          statusBar.textContent = "✅ New vehicle added - first inspection";
+          currentStep = 0;
+          updateStep();
+          nextButton.disabled = false;
+        } else {
+          // User says vehicle info is wrong - show manual entry
+          console.log('❌ User says vehicle info is wrong');
           showManualVehicleEntry();
         }
       };
 
       window.saveManualVehicle = async function() {
-        console.log('Saving manual vehicle...');
+        console.log('💾 Saving manual vehicle...');
         const make = document.getElementById('manual-make').value.trim();
         const model = document.getElementById('manual-model').value.trim();
         const year = document.getElementById('manual-year').value.trim();
@@ -718,16 +790,37 @@
           return;
         }
         
-        detectedVehicle = { make, model, year, color, plate, confidence: 1.0 };
-        detectedVehicle.vehicleUUID = generateVehicleUUID();
-        vehicleInfo = detectedVehicle;
-        currentVehicleId = detectedVehicle.vehicleUUID;
-        console.log('Created new vehicle UUID:', currentVehicleId);
+        // Check if manually entered vehicle already exists
+        const manualVehicle = { make, model, year, color, plate, confidence: 1.0 };
+        const existingVehicle = findExistingVehicle(manualVehicle);
+        
+        if (existingVehicle) {
+          // Found existing vehicle with manual entry
+          console.log('📋 Manual entry matches existing vehicle');
+          detectedVehicle = {
+            ...manualVehicle,
+            vehicleUUID: existingVehicle.vehicleUUID,
+            inspectionHistory: existingVehicle.inspectionHistory || [],
+            totalInspections: existingVehicle.inspectionHistory?.length || 0
+          };
+          vehicleInfo = detectedVehicle;
+          currentVehicleId = detectedVehicle.vehicleUUID;
+          statusBar.textContent = `✅ Vehicle found - inspection #${detectedVehicle.totalInspections + 1}`;
+        } else {
+          // Create new vehicle from manual entry
+          console.log('🆕 Creating new vehicle from manual entry');
+          detectedVehicle = manualVehicle;
+          detectedVehicle.vehicleUUID = generateVehicleUUID();
+          detectedVehicle.inspectionHistory = [];
+          detectedVehicle.totalInspections = 0;
+          vehicleInfo = detectedVehicle;
+          currentVehicleId = detectedVehicle.vehicleUUID;
+          statusBar.textContent = "✅ New vehicle created - first inspection";
+        }
         
         const popup = document.getElementById('manual-vehicle-entry');
         if (popup) popup.remove();
         
-        statusBar.textContent = "✅ Vehicle details saved - ready for inspection";
         currentStep = 0;
         updateStep();
         nextButton.disabled = false;
