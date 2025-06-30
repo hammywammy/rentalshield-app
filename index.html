@@ -294,15 +294,10 @@
     <script>
       console.log('Script starting...');
       
-      // Authentication setup (temporarily disabled for camera testing)
+      // Authentication setup
       let currentUser = null;
       
-      // Temporarily bypass auth for camera testing
-      currentUser = { id: 'test-user', email: 'test@example.com' };
-      console.log('Using test user for camera testing');
-      
-      /*
-      // Real auth code (commented out for testing)
+      // Check for authentication when page loads
       if (window.netlifyIdentity) {
         netlifyIdentity.on('init', user => {
           if (user) {
@@ -310,6 +305,7 @@
             console.log('User authenticated:', user.email);
           } else {
             console.log('No user authenticated');
+            // Redirect to auth page (uncomment when ready)
             // window.location.href = '/auth.html';
           }
         });
@@ -317,8 +313,9 @@
         netlifyIdentity.init();
       } else {
         console.log('Netlify Identity not available - running without auth');
+        // Fallback for testing
+        currentUser = { id: 'test-user', email: 'test@example.com' };
       }
-      */
       
       const steps = [
         "Front bumper",
