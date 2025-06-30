@@ -367,7 +367,7 @@
     <script>
       console.log('Script starting...');
       
-      // Initialize Supabase (will be set from environment)
+      // Initialize Supabase and user
       let supabase = null;
       let currentUser = null;
       
@@ -381,7 +381,7 @@
           supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
           console.log('✅ Supabase initialized');
           
-          // For now, create a test user
+          // Set test user
           currentUser = { 
             id: 'test-user-' + Date.now(), 
             email: 'test@example.com' 
@@ -389,7 +389,7 @@
           console.log('✅ Using test user:', currentUser.email);
         } catch (error) {
           console.error('❌ Supabase initialization failed:', error);
-          // Fallback to no database mode
+          // Fallback to offline mode
           currentUser = { id: 'offline-user', email: 'offline@example.com' };
         }
       }
