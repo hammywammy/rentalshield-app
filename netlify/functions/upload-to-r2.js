@@ -1,34 +1,20 @@
-// netlify/functions/upload-to-r2.js
-const headers = {
-  'Access-Control-Allow-Origin': 'https://rentalshield.net',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Content-Type': 'application/json'
-};
-
-// Handle preflight requests
-if (event.httpMethod === 'OPTIONS') {
-  return {
-    statusCode: 200,
-    headers,
-    body: ''
-  };
-}
-
-// Add headers to all responses
-return {
-  statusCode: 200,
-  headers,  // <-- Add this to every return
-  body: JSON.stringify(result)
-};
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 export const handler = async (event) => {
+  const headers = {
+    'Access-Control-Allow-Origin': 'https://rentalshield.net',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
   try {
-    // Parse FormData from event
     const formData = await event.formData();
     
-    // Extract data from form
     const file = formData.get('file');
     const fileName = formData.get('fileName');
     const vehicleId = formData.get('vehicleId');
@@ -40,11 +26,11 @@ export const handler = async (event) => {
     if (!file) {
       return {
         statusCode: 400,
+        headers,
         body: JSON.stringify({ error: 'No file provided' })
       };
     }
 
-    // Configure R2 client
     const r2Client = new S3Client({
       region: 'auto',
       endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -54,33 +40,27 @@ export const handler = async (event) => {
       },
     });
 
-    // OPTIMIZED: Better file naming
     const optimizedFileName = `step-${stepNumber.toString().padStart(2, '0')}_${stepName.replace(/_/g, '-')}.jpg`;
     
-    // OPTIMIZED: Organize by photo type
     let subFolder = 'exterior';
     if (stepNumber >= 14 && stepNumber <= 16) {
       subFolder = 'interior';
     } else if (stepNumber === 17) {
-      subFolder = 'documents'; // odometer
+      subFolder = 'documents';
     } else if (stepNumber === 18) {
-      subFolder = 'cargo'; // trunk
+      subFolder = 'cargo';
     }
     
-    // OPTIMIZED: Date-based partitioning for lifecycle management
     const now = new Date();
     const year = now.getFullYear();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
     
-    // Create optimized file path
     const filePath = `year=${year}/month=${month}/day=${day}/users/${userId}/vehicles/${vehicleId}/inspections/${inspectionId}/photos/${subFolder}/${optimizedFileName}`;
     
-    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to R2
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: filePath,
@@ -98,13 +78,11 @@ export const handler = async (event) => {
 
     await r2Client.send(command);
 
-    // Create public URL (adjust based on your R2 setup)
-    const publicUrl = `https://${process.env.R2_BUCKET_NAME}.${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com/${filePath}`;
-
-    console.log('✅ File uploaded to R2:', filePath);
+    const publicUrl = `https://cdn.rentalshield.net/${filePath}`;
 
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify({
         success: true,
         url: publicUrl,
@@ -119,6 +97,7 @@ export const handler = async (event) => {
     console.error('❌ R2 upload error:', error);
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({
         success: false,
         error: error.message
