@@ -1,28 +1,25 @@
-const headers = {
-  'Access-Control-Allow-Origin': 'https://rentalshield.net',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Content-Type': 'application/json'
-};
+export const handler = async (event, context) => {
+  const headers = {
+    'Access-Control-Allow-Origin': 'https://rentalshield.net',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Content-Type': 'application/json'
+  };
 
-// Handle preflight requests
-if (event.httpMethod === 'OPTIONS') {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    };
+  }
+
   return {
     statusCode: 200,
     headers,
-    body: ''
+    body: JSON.stringify({
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseKey: process.env.SUPABASE_ANON_KEY
+    })
   };
-}
-
-// Add headers to all responses
-return {
-  statusCode: 200,
-  headers,  // <-- Add this to every return
-  body: JSON.stringify(result)
-};
-export default async (req, res) => {
-  return res.json({
-    supabaseUrl: process.env.SUPABASE_URL,
-    supabaseKey: process.env.SUPABASE_ANON_KEY
-  });
 };
