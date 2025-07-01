@@ -71,6 +71,7 @@
         border-radius: 8px;
         cursor: pointer;
         font-size: 1rem;
+        transition: background 0.2s;
       }
       
       .user-btn:hover {
@@ -109,6 +110,7 @@
         font-size: 1rem;
         cursor: pointer;
         margin: 0.5rem;
+        transition: background 0.2s;
       }
       
       .btn:hover {
@@ -156,6 +158,7 @@
         cursor: pointer;
         z-index: 50;
         display: none;
+        transition: background 0.2s;
       }
       
       #photo-button {
@@ -164,9 +167,17 @@
         background: #007bff;
       }
       
+      #photo-button:hover {
+        background: #0056b3;
+      }
+      
       #next-button {
         right: 30px;
         background: #28a745;
+      }
+      
+      #next-button:hover {
+        background: #1e7e34;
       }
       
       #next-button:disabled {
@@ -205,6 +216,7 @@
         max-width: 400px;
         width: 90%;
         color: #333;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
       }
       
       .popup-buttons {
@@ -220,6 +232,7 @@
         border-radius: 4px;
         cursor: pointer;
         font-size: 1rem;
+        transition: background 0.2s;
       }
       
       .btn-yes {
@@ -227,9 +240,17 @@
         color: white;
       }
       
+      .btn-yes:hover {
+        background: #1e7e34;
+      }
+      
       .btn-no {
         background: #dc3545;
         color: white;
+      }
+      
+      .btn-no:hover {
+        background: #c82333;
       }
       
       .manual-form {
@@ -297,7 +318,7 @@
     <!-- Start Screen -->
     <div id="start-screen">
       <h1>Car Inspection - Enterprise Functions</h1>
-      <p>Professional API subdomain + R2 + Supabase hybrid system</p>
+      <p>Professional API: api.rentalshield.net | CDN: cdn.rentalshield.net</p>
       <button id="start-inspection-btn" class="btn">Start Inspection</button>
       <button id="test-mode-btn" class="btn">Test Mode</button>
       <button id="back-to-users-btn" class="btn">← Back to Users</button>
@@ -310,15 +331,29 @@
     <button id="next-button" disabled>Next Step</button>
 
     <script>
-      console.log('🏢 Enterprise Functions Starting with API Subdomain...');
+      console.log('🏢 Enterprise Functions Starting with Professional API...');
       
-      // API Configuration - Professional Endpoints
+      // FIXED: Professional API Configuration
       const API_ENDPOINTS = {
         getConfig: 'https://api.rentalshield.net/.netlify/functions/get-config',
         detectVehicle: 'https://api.rentalshield.net/.netlify/functions/gpt-vehicle-detect',
         uploadPhoto: 'https://api.rentalshield.net/.netlify/functions/upload-to-r2',
         vehicleHybrid: 'https://api.rentalshield.net/.netlify/functions/vehicle-hybrid'
       };
+      
+      // Fallback to direct Netlify URLs if API subdomain fails
+      const FALLBACK_ENDPOINTS = {
+        getConfig: '/.netlify/functions/get-config',
+        detectVehicle: '/.netlify/functions/gpt-vehicle-detect',
+        uploadPhoto: '/.netlify/functions/upload-to-r2',
+        vehicleHybrid: '/.netlify/functions/vehicle-hybrid'
+      };
+      
+      let useApiSubdomain = true;
+      
+      function getEndpoint(name) {
+        return useApiSubdomain ? API_ENDPOINTS[name] : FALLBACK_ENDPOINTS[name];
+      }
       
       // Test users
       const TEST_USERS = {
@@ -370,15 +405,31 @@
       const startScreen = document.getElementById("start-screen");
       const flashEffect = document.getElementById("flash-effect");
 
-      // Initialize Supabase via API subdomain
+      // Initialize Supabase with fallback
       async function initSupabase() {
         try {
-          const configResponse = await fetch(API_ENDPOINTS.getConfig);
+          console.log('🔗 Trying API subdomain...');
+          const configResponse = await fetch(getEndpoint('getConfig'));
+          
+          if (!configResponse.ok) {
+            throw new Error('API subdomain failed');
+          }
+          
           const config = await configResponse.json();
           supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
           console.log('✅ Supabase initialized via API subdomain');
         } catch (error) {
-          console.error('❌ Supabase failed:', error);
+          console.log('⚠️ API subdomain failed, trying fallback...');
+          useApiSubdomain = false;
+          
+          try {
+            const configResponse = await fetch(getEndpoint('getConfig'));
+            const config = await configResponse.json();
+            supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+            console.log('✅ Supabase initialized via fallback');
+          } catch (fallbackError) {
+            console.error('❌ Both API endpoints failed:', fallbackError);
+          }
         }
       }
 
@@ -392,8 +443,17 @@
           video.srcObject = stream;
           console.log("✅ Camera started");
         } catch (e) {
-          console.log("❌ Camera failed");
-          video.style.display = 'none';
+          console.log("❌ Camera failed, using front camera");
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: "user" },
+              audio: false,
+            });
+            video.srcObject = stream;
+          } catch (e2) {
+            console.log("❌ All cameras failed");
+            video.style.display = 'none';
+          }
         }
       }
 
@@ -408,7 +468,7 @@
       // Select user
       function selectUser(userNumber) {
         currentUser = TEST_USERS[userNumber];
-        console.log('✅ Selected:', currentUser.name);
+        console.log('✅ Selected:', currentUser.name, currentUser.email);
         userSelectionScreen.style.display = "none";
         startScreen.style.display = "flex";
       }
@@ -426,12 +486,12 @@
         nextButton.style.display = "none";
       }
 
-      // Check vehicle with hybrid system via API
+      // Check vehicle with hybrid system
       async function checkSpecificVehicle(detectedPlate) {
         try {
-          console.log('🔍 Checking hybrid system via API for:', detectedPlate);
+          console.log('🔍 Checking vehicle for plate:', detectedPlate);
           
-          const response = await fetch(API_ENDPOINTS.vehicleHybrid, {
+          const response = await fetch(getEndpoint('vehicleHybrid'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -444,10 +504,10 @@
           const result = await response.json();
           
           if (result.found) {
-            console.log('✅ Found vehicle via API:', result.vehicle);
+            console.log('✅ Found existing vehicle:', result.vehicle);
             return result.vehicle;
           } else {
-            console.log('❌ No vehicle found');
+            console.log('❌ No vehicle found for plate:', detectedPlate);
             return null;
           }
         } catch (error) {
@@ -456,12 +516,12 @@
         }
       }
 
-      // Create inspection via API
+      // Create inspection
       async function createInspection() {
         try {
-          console.log('📝 Creating inspection via API');
+          console.log('📝 Creating inspection...');
           
-          const response = await fetch(API_ENDPOINTS.vehicleHybrid, {
+          const response = await fetch(getEndpoint('vehicleHybrid'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -479,7 +539,10 @@
           
           if (result.success) {
             currentInspectionId = result.inspectionId;
-            console.log('✅ Created inspection via API:', result.folderPath);
+            console.log('✅ Created inspection:', result.inspectionId);
+          } else {
+            currentInspectionId = generateUUID();
+            console.log('⚠️ Using fallback inspection ID');
           }
         } catch (error) {
           console.error('❌ Error creating inspection:', error);
@@ -505,12 +568,14 @@
 
       // Test mode
       async function startTestMode() {
-        console.log('🧪 Test mode');
+        console.log('🧪 Starting test mode');
         isTestMode = true;
         inspectionStarted = true;
         startScreen.style.display = "none";
         statusBar.style.display = "block";
         stepInstruction.style.display = "block";
+        photoButton.style.display = "block";
+        nextButton.style.display = "block";
         
         statusBar.textContent = "🧪 Test mode active";
         stepInstruction.textContent = "🧪 TEST MODE: Using sample data";
@@ -522,6 +587,10 @@
         vehicleInfo = detectedVehicle;
         currentVehicleId = generateUUID();
         currentInspectionId = generateUUID();
+        
+        // Skip license plate, go to first photo step
+        currentStep = 0;
+        updateStep();
       }
 
       // Update step
@@ -537,10 +606,10 @@
         nextButton.disabled = true;
       }
 
-      // License plate detection via API
+      // License plate detection
       async function detectLicensePlate() {
         try {
-          statusBar.textContent = "🤖 Analyzing with GPT-4o via API...";
+          statusBar.textContent = "🤖 Analyzing with GPT-4o...";
           
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
@@ -551,7 +620,7 @@
           const imageData = canvas.toDataURL('image/jpeg', 0.8);
           const base64 = imageData.split(',')[1];
           
-          const response = await fetch(API_ENDPOINTS.detectVehicle, {
+          const response = await fetch(getEndpoint('detectVehicle'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -561,7 +630,7 @@
           });
           
           const result = await response.json();
-          console.log('🤖 GPT result via API:', result);
+          console.log('🤖 GPT result:', result);
           
           if (result.success && result.vehicle) {
             statusBar.textContent = "✅ Vehicle detected - checking database...";
@@ -585,7 +654,7 @@
               showNewVehicleConfirmation(result.vehicle);
             }
           } else {
-            console.log('❌ Detection failed');
+            console.log('❌ Detection failed, showing manual entry');
             statusBar.textContent = "Detection failed - manual entry";
             showSimpleVehicleEntry();
           }
@@ -622,27 +691,7 @@
         `;
         
         detectedVehicle = vehicleData;
-        document.getElementById('start-inspection-btn').addEventListener("click", startInspection);
-      document.getElementById('test-mode-btn').addEventListener("click", startTestMode);
-      document.getElementById('back-to-users-btn').addEventListener("click", backToUserSelection);
-      document.getElementById('photo-button').addEventListener("click", capturePhoto);
-      document.getElementById('next-button').addEventListener("click", nextStep);
-
-      // Initialize
-      console.log('🏢 Initializing enterprise functions with API subdomain...');
-      console.log('🔗 API Base:', 'api.rentalshield.net');
-      initSupabase().then(() => {
-        startCamera();
-        console.log('✅ Enterprise functions ready with professional API!');
-      }).catch(error => {
-        console.error('❌ Setup failed:', error);
-        startCamera();
-        console.log('⚠️ Running in offline mode');
-      });
-
-    </script>
-  </body>
-</html>body.appendChild(popup);
+        document.body.appendChild(popup);
       }
 
       function showNewVehicleConfirmation(vehicleData) {
@@ -673,15 +722,15 @@
           <h3>Enter Vehicle Details</h3>
           <div class="manual-form">
             <div class="form-row">
-              <div><label>License Plate</label><input type="text" id="manual-plate" placeholder="ABC123"></div>
+              <div><label>License Plate</label><input type="text" id="manual-plate" placeholder="1393"></div>
             </div>
             <div class="form-row">
-              <div><label>Make</label><input type="text" id="manual-make" placeholder="Toyota"></div>
-              <div><label>Model</label><input type="text" id="manual-model" placeholder="Camry"></div>
+              <div><label>Make</label><input type="text" id="manual-make" placeholder="Cadillac"></div>
+              <div><label>Model</label><input type="text" id="manual-model" placeholder="SRX"></div>
             </div>
             <div class="form-row">
-              <div><label>Year</label><input type="number" id="manual-year" placeholder="2023"></div>
-              <div><label>Color</label><input type="text" id="manual-color" placeholder="Silver"></div>
+              <div><label>Year</label><input type="number" id="manual-year" placeholder="2016"></div>
+              <div><label>Color</label><input type="text" id="manual-color" placeholder="Dark Blue Gray"></div>
             </div>
           </div>
           <div class="popup-buttons">
@@ -759,11 +808,11 @@
         nextButton.disabled = false;
       };
 
-      // Upload to R2 via API with enterprise structure
+      // Upload to R2 with enterprise structure
       async function uploadToR2() {
         try {
           const step = steps[currentStep];
-          statusBar.textContent = `📤 Uploading ${step.category} photo via API...`;
+          statusBar.textContent = `📤 Uploading ${step.category} photo...`;
           
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
@@ -779,9 +828,9 @@
             
             const stepName = step.name;
             const stepNumber = currentStep + 1;
-            const fileName = `${stepName}_${currentVehicleId}.jpg`;
+            const fileName = `step-${stepNumber.toString().padStart(2, '0')}_${stepName.replace(/_/g, '-')}.jpg`;
             
-            console.log(`📤 Uploading via API: Step ${stepNumber} (${Math.round(blob.size / 1024)} KB)`);
+            console.log(`📤 Uploading: Step ${stepNumber} (${Math.round(blob.size / 1024)} KB)`);
 
             try {
               const formData = new FormData();
@@ -793,7 +842,7 @@
               formData.append('stepNumber', stepNumber);
               formData.append('userId', currentUser.id);
 
-              const response = await fetch(API_ENDPOINTS.uploadPhoto, {
+              const response = await fetch(getEndpoint('uploadPhoto'), {
                 method: 'POST',
                 body: formData
               });
@@ -818,9 +867,9 @@
                 
                 uploadedFiles.push(fileInfo);
 
-                statusBar.textContent = `✅ ${step.category} photo uploaded to ${result.subFolder} via API!`;
+                statusBar.textContent = `✅ ${step.category} photo uploaded to CDN!`;
                 nextButton.disabled = false;
-                console.log('✅ Upload successful via API:', result.path);
+                console.log('✅ Upload successful:', result.path);
               } else {
                 throw new Error(`Upload failed: ${response.status}`);
               }
@@ -840,7 +889,7 @@
 
       // Capture photo
       function capturePhoto() {
-        console.log('📸 Capturing photo...');
+        console.log('📸 Capturing photo for step:', currentStep === -1 ? 'license plate' : steps[currentStep].name);
         
         flashEffect.classList.add("active");
         setTimeout(() => flashEffect.classList.remove("active"), 100);
@@ -862,15 +911,105 @@
           stepInstruction.textContent = "🎉 Inspection completed!";
           nextButton.style.display = "none";
           photoButton.style.display = "none";
-          statusBar.textContent = "✅ All photos uploaded to enterprise cloud via API!";
+          statusBar.textContent = "✅ All photos uploaded to enterprise CDN!";
           
-          console.log('✅ Inspection complete via API:', uploadedFiles.length, 'files uploaded');
+          console.log('✅ Inspection complete:', uploadedFiles.length, 'files uploaded');
+          console.log('📊 Uploaded files:', uploadedFiles);
         }
       }
 
-      // Event listeners
-      document.getElementById('user1-btn').addEventListener('click', () => selectUser(1));
-      document.getElementById('user2-btn').addEventListener('click', () => selectUser(2));
-      document.getElementById('user3-btn').addEventListener('click', () => selectUser(3));
-      
-      document.
+      // Event listeners with error handling
+      function addEventListeners() {
+        try {
+          document.getElementById('user1-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('👤 User 1 clicked');
+            selectUser(1);
+          });
+          
+          document.getElementById('user2-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('👤 User 2 clicked');
+            selectUser(2);
+          });
+          
+          document.getElementById('user3-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('👤 User 3 clicked');
+            selectUser(3);
+          });
+          
+          document.getElementById('start-inspection-btn').addEventListener("click", (e) => {
+            e.preventDefault();
+            console.log('🚀 Start inspection clicked');
+            startInspection();
+          });
+          
+          document.getElementById('test-mode-btn').addEventListener("click", (e) => {
+            e.preventDefault();
+            console.log('🧪 Test mode clicked');
+            startTestMode();
+          });
+          
+          document.getElementById('back-to-users-btn').addEventListener("click", (e) => {
+            e.preventDefault();
+            console.log('⬅️ Back to users clicked');
+            backToUserSelection();
+          });
+          
+          document.getElementById('photo-button').addEventListener("click", (e) => {
+            e.preventDefault();
+            console.log('📸 Photo button clicked');
+            capturePhoto();
+          });
+          
+          document.getElementById('next-button').addEventListener("click", (e) => {
+            e.preventDefault();
+            console.log('➡️ Next button clicked');
+            nextStep();
+          });
+          
+          console.log('✅ All event listeners attached');
+        } catch (error) {
+          console.error('❌ Error attaching event listeners:', error);
+        }
+      }
+
+      // Initialize everything
+      async function initializeApp() {
+        console.log('🏢 Initializing enterprise functions...');
+        console.log('🔗 API Endpoint:', useApiSubdomain ? 'api.rentalshield.net' : 'local functions');
+        
+        try {
+          // Add event listeners first
+          addEventListeners();
+          
+          // Initialize camera
+          await startCamera();
+          
+          // Initialize Supabase with fallback
+          await initSupabase();
+          
+          console.log('✅ Enterprise functions ready!');
+          console.log('📱 Ready for user selection');
+          
+        } catch (error) {
+          console.error('❌ Setup failed:', error);
+          console.log('⚠️ Running in limited mode');
+          
+          // Still try to start camera and add listeners
+          addEventListeners();
+          await startCamera();
+        }
+      }
+
+      // Start the app when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeApp);
+      } else {
+        initializeApp();
+      }
+
+    </script>
+  </body>
+</html>
