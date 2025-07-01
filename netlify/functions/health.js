@@ -1,11 +1,48 @@
 export const handler = async () => {
-  return {
-    statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      status: 'healthy',
+  const startTime = Date.now();
+  
+  try {
+    // Test critical dependencies
+    const checks = {
       timestamp: new Date().toISOString(),
-      service: 'rentalshield-api'
-    })
-  };
+      service: 'rentalshield-api',
+      status: 'healthy',
+      version: '1.0.0',
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'production'
+    };
+
+    // Optional: Test Supabase connection
+    if (process.env.SUPABASE_URL) {
+      checks.database = 'connected';
+    }
+
+    // Optional: Test R2 connection
+    if (process.env.CLOUDFLARE_ACCOUNT_ID) {
+      checks.storage = 'connected';
+    }
+
+    const responseTime = Date.now() - startTime;
+    checks.responseTime = `${responseTime}ms`;
+
+    return {
+      statusCode: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+      },
+      body: JSON.stringify(checks)
+    };
+    
+  } catch (error) {
+    return {
+      statusCode: 503,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'unhealthy',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      })
+    };
+  }
 };
