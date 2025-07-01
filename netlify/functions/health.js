@@ -1,30 +1,19 @@
-const headers = {
-  'Access-Control-Allow-Origin': 'https://rentalshield.net',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Content-Type': 'application/json'
-};
-
-// Handle preflight requests
-if (event.httpMethod === 'OPTIONS') {
-  return {
-    statusCode: 200,
-    headers,
-    body: ''
+export const handler = async (event) => {
+  const headers = {
+    'Access-Control-Allow-Origin': 'https://rentalshield.net',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache'
   };
-}
 
-// Add headers to all responses
-return {
-  statusCode: 200,
-  headers,  // <-- Add this to every return
-  body: JSON.stringify(result)
-};
-export const handler = async () => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
   const startTime = Date.now();
   
   try {
-    // Test critical dependencies
     const checks = {
       timestamp: new Date().toISOString(),
       service: 'rentalshield-api',
@@ -34,12 +23,10 @@ export const handler = async () => {
       environment: process.env.NODE_ENV || 'production'
     };
 
-    // Optional: Test Supabase connection
     if (process.env.SUPABASE_URL) {
       checks.database = 'connected';
     }
 
-    // Optional: Test R2 connection
     if (process.env.CLOUDFLARE_ACCOUNT_ID) {
       checks.storage = 'connected';
     }
@@ -49,17 +36,14 @@ export const handler = async () => {
 
     return {
       statusCode: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache'
-      },
+      headers,
       body: JSON.stringify(checks)
     };
     
   } catch (error) {
     return {
       statusCode: 503,
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         status: 'unhealthy',
         error: error.message,
