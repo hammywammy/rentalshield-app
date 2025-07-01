@@ -1,31 +1,8 @@
-const headers = {
-  'Access-Control-Allow-Origin': 'https://rentalshield.net',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Content-Type': 'application/json'
-};
-
-// Handle preflight requests
-if (event.httpMethod === 'OPTIONS') {
-  return {
-    statusCode: 200,
-    headers,
-    body: ''
-  };
-}
-
-// Add headers to all responses
-return {
-  statusCode: 200,
-  headers,  // <-- Add this to every return
-  body: JSON.stringify(result)
-};
 import { createClient } from '@supabase/supabase-js';
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
-// ✅ FIXED: R2 client setup (no variable scope issue)
 const r2Client = new S3Client({
   region: 'auto',
   endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -42,7 +19,6 @@ function generateUUID() {
   });
 }
 
-// ✅ FIXED: Helper function for date-based paths
 function createDateBasedPath(userId, vehicleId, inspectionId) {
   const now = new Date();
   const year = now.getFullYear();
@@ -86,7 +62,6 @@ async function findVehicleByPlate(userId, licensePlate) {
   console.log('🔍 Finding vehicle by plate:', licensePlate);
   
   try {
-    // Step 1: Quick database index lookup
     const { data: vehicleIndex, error } = await supabase
       .from('vehicle_index')
       .select('*')
@@ -101,12 +76,10 @@ async function findVehicleByPlate(userId, licensePlate) {
     
     console.log('✅ Found vehicle index:', vehicleIndex);
     
-    // Step 2: Load vehicle metadata from R2
     const vehicleMetadata = await readFromR2(`${vehicleIndex.r2_folder_path}/vehicle_info.json`);
     
     if (!vehicleMetadata) {
       console.log('⚠️ Vehicle index found but no R2 metadata');
-      // Fallback to index data
       return {
         found: true,
         vehicle: {
@@ -123,7 +96,6 @@ async function findVehicleByPlate(userId, licensePlate) {
       };
     }
     
-    // Step 3: Load inspections index from R2
     const inspectionsIndex = await readFromR2(`${vehicleIndex.r2_folder_path}/inspections/index.json`) || {
       inspections: [],
       total_inspections: 0
@@ -154,7 +126,6 @@ async function createVehicleFolder(userId, vehicleData) {
   const vehicleId = generateUUID();
   const folderPath = `users/${userId}/vehicles/${vehicleId}`;
   
-  // Create vehicle metadata file
   const vehicleMetadata = {
     vehicle_id: vehicleId,
     make: vehicleData.make,
@@ -169,10 +140,8 @@ async function createVehicleFolder(userId, vehicleData) {
     }]
   };
   
-  // Upload vehicle info to R2
   await uploadToR2(`${folderPath}/vehicle_info.json`, JSON.stringify(vehicleMetadata, null, 2));
   
-  // Create empty inspections index
   const inspectionsIndex = {
     vehicle_id: vehicleId,
     total_inspections: 0,
@@ -181,7 +150,6 @@ async function createVehicleFolder(userId, vehicleData) {
   
   await uploadToR2(`${folderPath}/inspections/index.json`, JSON.stringify(inspectionsIndex, null, 2));
   
-  // Add to database index
   const { error } = await supabase.from('vehicle_index').insert({
     user_id: userId,
     vehicle_id: vehicleId,
@@ -207,12 +175,8 @@ async function createInspectionFolder(userId, vehicleId, inspectionData) {
   console.log('📝 Creating inspection folder');
   
   const inspectionId = `${new Date().toISOString().split('T')[0]}_insp-${generateUUID().substring(0, 8)}`;
-  const vehicleFolderPath = `users/${userId}/vehicles/${vehicleId}`;
-  
-  // ✅ FIXED: Use the helper function for date-based path
   const inspectionFolderPath = createDateBasedPath(userId, vehicleId, inspectionId);
   
-  // Create inspection metadata
   const inspectionMetadata = {
     inspection_id: inspectionId,
     vehicle_id: vehicleId,
@@ -223,10 +187,8 @@ async function createInspectionFolder(userId, vehicleId, inspectionData) {
     created_at: new Date().toISOString()
   };
   
-  // Upload inspection metadata to R2
   await uploadToR2(`${inspectionFolderPath}/metadata.json`, JSON.stringify(inspectionMetadata, null, 2));
   
-  // Add to database inspection index
   const { error } = await supabase.from('inspection_index').insert({
     inspection_id: inspectionId,
     vehicle_id: vehicleId,
@@ -246,12 +208,16 @@ async function createInspectionFolder(userId, vehicleId, inspectionData) {
 }
 
 export const handler = async (event) => {
-  // ✅ FIXED: Add CORS headers
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': 'https://rentalshield.net',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json'
   };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
   
   try {
     if (event.httpMethod !== 'POST') {
