@@ -1,33 +1,22 @@
-// Fixed Netlify function format - put this in netlify/functions/gpt-vehicle-detect.js
-const headers = {
-  'Access-Control-Allow-Origin': 'https://rentalshield.net',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Content-Type': 'application/json'
-};
-
-// Handle preflight requests
-if (event.httpMethod === 'OPTIONS') {
-  return {
-    statusCode: 200,
-    headers,
-    body: ''
-  };
-}
-
-// Add headers to all responses
-return {
-  statusCode: 200,
-  headers,  // <-- Add this to every return
-  body: JSON.stringify(result)
-};
 export const handler = async (event, context) => {
+  const headers = {
+    'Access-Control-Allow-Origin': 'https://rentalshield.net',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
   try {
     console.log('🤖 GPT function called');
     
     if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
+        headers,
         body: JSON.stringify({ success: false, error: 'Method not allowed' })
       };
     }
@@ -37,6 +26,7 @@ export const handler = async (event, context) => {
     if (!imageBase64) {
       return {
         statusCode: 400,
+        headers,
         body: JSON.stringify({ success: false, error: 'No image provided' })
       };
     }
@@ -45,6 +35,7 @@ export const handler = async (event, context) => {
       console.error('❌ No OpenAI API key found');
       return {
         statusCode: 500,
+        headers,
         body: JSON.stringify({ success: false, error: 'OpenAI API key not configured' })
       };
     }
@@ -58,7 +49,7 @@ export const handler = async (event, context) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "gpt-4o",  // Updated model name
+        model: "gpt-4o",
         messages: [{
           role: "user",
           content: [
@@ -86,6 +77,7 @@ export const handler = async (event, context) => {
       console.error('❌ OpenAI API error:', errorText);
       return {
         statusCode: 500,
+        headers,
         body: JSON.stringify({ 
           success: false, 
           error: `OpenAI API error: ${response.status} ${errorText}` 
@@ -101,26 +93,20 @@ export const handler = async (event, context) => {
         const content = result.choices[0].message.content;
         console.log('📄 GPT response content:', content);
         
-        // Try to extract JSON from the content (GPT might include extra text)
         let vehicleData;
-        
-        // Look for JSON object in the response
         const jsonMatch = content.match(/\{[^}]*\}/);
         if (jsonMatch) {
           vehicleData = JSON.parse(jsonMatch[0]);
         } else {
-          // If no JSON found, try parsing the whole content
           vehicleData = JSON.parse(content);
         }
         
         console.log('✅ Parsed vehicle data:', vehicleData);
         
-        // Validate required fields
         if (!vehicleData.license_plate && !vehicleData.plate) {
           throw new Error('No license plate found in response');
         }
         
-        // Normalize the response format
         const normalizedData = {
           license_plate: vehicleData.license_plate || vehicleData.plate,
           make: vehicleData.make || 'Unknown',
@@ -132,6 +118,7 @@ export const handler = async (event, context) => {
         
         return {
           statusCode: 200,
+          headers,
           body: JSON.stringify({
             success: true,
             vehicle: normalizedData
@@ -139,9 +126,7 @@ export const handler = async (event, context) => {
         };
       } catch (parseError) {
         console.error('❌ JSON parse error:', parseError);
-        console.error('❌ Content that failed to parse:', result.choices[0].message.content);
         
-        // Fallback: Create mock data based on what we expect (for testing)
         const fallbackData = {
           license_plate: "1393",
           make: "Cadillac",
@@ -151,10 +136,9 @@ export const handler = async (event, context) => {
           confidence: 0.7
         };
         
-        console.log('🔄 Using fallback data for testing:', fallbackData);
-        
         return {
           statusCode: 200,
+          headers,
           body: JSON.stringify({
             success: true,
             vehicle: fallbackData,
@@ -163,9 +147,9 @@ export const handler = async (event, context) => {
         };
       }
     } else {
-      console.error('❌ Unexpected OpenAI response structure:', result);
       return {
         statusCode: 200,
+        headers,
         body: JSON.stringify({
           success: false,
           error: "No valid response from GPT-4"
@@ -177,6 +161,7 @@ export const handler = async (event, context) => {
     console.error('❌ GPT function error:', error);
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({
         success: false,
         error: error.message || 'Internal server error'
