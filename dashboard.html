@@ -223,15 +223,23 @@
 
         // Start new inspection
         function startNewInspection() {
+    console.log('📊 DASHBOARD: Start inspection clicked');
+    console.log('📊 DASHBOARD: Current user:', currentUser);
+    
     // Store user info for inspection
-    localStorage.setItem('currentUser', JSON.stringify({
+    const userData = {
         id: currentUser.id,
         email: currentUser.email,
         name: currentUser.user_metadata?.full_name || currentUser.email
-    }));
+    };
+    
+    localStorage.setItem('currentUser', JSON.stringify(userData));
+    console.log('📊 DASHBOARD: Stored user in localStorage:', userData);
     
     // Redirect to inspection page
-    window.location.href = '/inspection.html';  // ← Changed from '/index.html'
+    console.log('📊 DASHBOARD: Redirecting to /inspection.html');
+    window.location.href = '/inspection.html';
+}l';  // ← Changed from '/index.html'
 }
 
         // View vehicle details
