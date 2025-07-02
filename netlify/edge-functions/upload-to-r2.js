@@ -56,18 +56,17 @@ export default async (request, context) => {
     const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
     
     // Simple upload using signed URL approach
-    const uploadUrl = `${endpoint}/${bucketName}/${fullPath}`;
-    
-    // For Edge Functions, we'll use a simpler approach
-    // Upload directly to R2 using fetch with proper headers
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
+// Simplified upload using direct REST API
+const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${fullPath}`;
+
+const uploadResponse = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+        'Authorization': `Bearer ${Deno.env.get('CLOUDFLARE_API_TOKEN')}`,
         'Content-Type': file.type || 'image/jpeg',
-        'Content-Length': fileBuffer.byteLength.toString(),
-      },
-      body: fileBuffer
-    });
+    },
+    body: fileBuffer
+});
 
     if (!uploadResponse.ok) {
       throw new Error(`R2 upload failed: ${uploadResponse.status}`);
