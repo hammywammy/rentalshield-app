@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vehicle Inspection - RentalShield</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -377,34 +377,23 @@
         // Initialize Supabase
         async function initSupabase() {
             try {
-                console.log('🔗 Trying API subdomain...');
+                console.log('🔗 Getting Supabase config...');
                 const configResponse = await fetch(getEndpoint('getConfig'));
                 
                 if (!configResponse.ok) {
-                    throw new Error('API subdomain failed');
+                    throw new Error('Config endpoint failed');
                 }
                 
                 const config = await configResponse.json();
                 supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
-                console.log('✅ Supabase initialized via API subdomain');
+                console.log('✅ Supabase initialized');
             } catch (error) {
-                console.log('⚠️ API subdomain failed, using fallback...');
-                useApiSubdomain = false;
-                
-                try {
-                    const configResponse = await fetch(getEndpoint('getConfig'));
-                    const config = await configResponse.json();
-                    supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
-                    console.log('✅ Supabase initialized via fallback');
-                } catch (fallbackError) {
-                    console.error('❌ Both API endpoints failed:', fallbackError);
-                    // Use hardcoded credentials as final fallback
-                    const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
-                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
-                    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                    useApiSubdomain = false; // Force fallback mode for all subsequent calls
-                    console.log('✅ Supabase initialized with fallback credentials - using local endpoints');
-                }
+                console.error('❌ Config endpoint failed:', error);
+                // Use hardcoded credentials as fallback
+                const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
+                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                console.log('✅ Supabase initialized with fallback credentials');
             }
         }
 
@@ -779,13 +768,6 @@
                         const response = await fetch(getEndpoint('uploadPhoto'), {
                             method: 'POST',
                             body: formData
-                        }).catch(async (corsError) => {
-                            console.log('🔄 Upload CORS failed, trying fallback endpoint...');
-                            useApiSubdomain = false;
-                            return await fetch(getEndpoint('uploadPhoto'), {
-                                method: 'POST',
-                                body: formData
-                            });
                         });
 
                         if (response.ok) {
