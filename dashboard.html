@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RentalShield - Dashboard</title>
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            background: #f5f5f5;
+        }
+        .header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .welcome {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .new-inspection-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+        .vehicles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .vehicle-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        .logout-btn {
+            background: #dc3545;
+        }
+        .logout-btn:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">🛡️ RentalShield</div>
+        <div class="user-info">
+            <span id="user-name">Loading...</span>
+            <button class="logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="welcome">
+            <h1>Welcome to your Dashboard</h1>
+            <p>Manage your vehicle inspections and documentation</p>
+            <button class="new-inspection-btn" onclick="startNewInspection()">
+                📱 Start New Inspection
+            </button>
+        </div>
+
+        <div id="vehicles-section">
+            <h2>Your Vehicles</h2>
+            <div id="vehicles-grid" class="vehicles-grid">
+                <!-- Vehicles will be loaded here -->
+                <div class="vehicle-card">
+                    <h3>No vehicles yet</h3>
+                    <p>Start your first inspection to add a vehicle</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Initialize and check authentication
+        netlifyIdentity.on('init', user => {
+            if (!user) {
+                // No user logged in, redirect to auth
+                window.location.href = '/auth.html';
+                return;
+            }
+            
+            currentUser = user;
+            displayUserInfo(user);
+            loadUserVehicles();
+        });
+
+        // Display user information
+        function displayUserInfo(user) {
+            const userName = user.user_metadata?.full_name || user.email;
+            document.getElementById('user-name').textContent = userName;
+        }
+
+        // Load user's vehicles (placeholder for now)
+        function loadUserVehicles() {
+            // This will connect to your R2 storage later
+            console.log('Loading vehicles for user:', currentUser.id);
+            
+            // For now, show placeholder
+            const vehiclesGrid = document.getElementById('vehicles-grid');
+            vehiclesGrid.innerHTML = `
+                <div class="vehicle-card">
+                    <h3>Coming Soon</h3>
+                    <p>Vehicle history will appear here after your first inspection</p>
+                </div>
+            `;
+        }
+
+        // Start new inspection
+        function startNewInspection() {
+            // Store user info for inspection
+            localStorage.setItem('currentUser', JSON.stringify({
+                id: currentUser.id,
+                email: currentUser.email,
+                name: currentUser.user_metadata?.full_name || currentUser.email
+            }));
+            
+            // Redirect to inspection page
+            window.location.href = '/index.html';
+        }
+
+        // Handle logout
+        function handleLogout() {
+            netlifyIdentity.logout();
+        }
+
+        // Handle logout event
+        netlifyIdentity.on('logout', () => {
+            window.location.href = '/auth.html';
+        });
+
+        // Initialize
+        netlifyIdentity.init();
+    </script>
+</body>
+</html>
