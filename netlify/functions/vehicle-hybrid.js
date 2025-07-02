@@ -1,281 +1,171 @@
-import { createClient } from '@supabase/supabase-js';
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-
-  const headers = {
-    'Access-Control-Allow-Origin': 'https://rentalshield.net',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
-  };
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-
-const r2Client = new S3Client({
-  region: 'auto',
-  endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.CLOUDFLARE_ACCESS_KEY_ID,
-    secretAccessKey: process.env.CLOUDFLARE_SECRET_ACCESS_KEY,
-  },
-});
-
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-function createDateBasedPath(userId, vehicleId, inspectionId) {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = (now.getMonth() + 1).toString().padStart(2, '0');
-  const day = now.getDate().toString().padStart(2, '0');
-  
-  return `year=${year}/month=${month}/day=${day}/users/${userId}/vehicles/${vehicleId}/inspections/${inspectionId}`;
-}
-
-async function uploadToR2(filePath, content, contentType = 'application/json') {
-  try {
-    await r2Client.send(new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: filePath,
-      Body: content,
-      ContentType: contentType
-    }));
-    return true;
-  } catch (error) {
-    console.error('R2 upload error:', error);
-    return false;
+export default async (request, context) => {
+  // Handle CORS preflight
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
   }
-}
 
-async function readFromR2(filePath) {
-  try {
-    const response = await r2Client.send(new GetObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: filePath
-    }));
-    
-    const content = await response.Body.transformToString();
-    return JSON.parse(content);
-  } catch (error) {
-    console.error('R2 read error:', error);
-    return null;
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-}
 
-async function findVehicleByPlate(userId, licensePlate) {
-  console.log('🔍 Finding vehicle by plate:', licensePlate);
-  
   try {
-    const { data: vehicleIndex, error } = await supabase
-      .from('vehicle_index')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('license_plate', licensePlate)
-      .single();
-      
-    if (error || !vehicleIndex) {
-      console.log('❌ No vehicle found in index for plate:', licensePlate);
-      return { found: false };
+    const { action, userId, vehicleData, inspectionData } = await request.json();
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase credentials not configured');
     }
-    
-    console.log('✅ Found vehicle index:', vehicleIndex);
-    
-    const vehicleMetadata = await readFromR2(`${vehicleIndex.r2_folder_path}/vehicle_info.json`);
-    
-    if (!vehicleMetadata) {
-      console.log('⚠️ Vehicle index found but no R2 metadata');
-      return {
-        found: true,
-        vehicle: {
-          id: vehicleIndex.vehicle_id,
-          make: vehicleIndex.make,
-          model: vehicleIndex.model,
-          year: vehicleIndex.year,
-          color: vehicleIndex.color,
-          license_plate: vehicleIndex.license_plate,
-          totalInspections: vehicleIndex.total_inspections,
-          lastInspection: null,
-          inspectionHistory: []
-        }
-      };
-    }
-    
-    const inspectionsIndex = await readFromR2(`${vehicleIndex.r2_folder_path}/inspections/index.json`) || {
-      inspections: [],
-      total_inspections: 0
+
+    const headers = {
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json',
+      'apikey': supabaseKey
     };
-    
-    console.log('✅ Loaded complete vehicle data from hybrid system');
-    
-    return {
-      found: true,
-      vehicle: {
-        ...vehicleMetadata,
-        id: vehicleIndex.vehicle_id,
-        totalInspections: vehicleIndex.total_inspections,
-        lastInspection: inspectionsIndex.inspections[0] || null,
-        inspectionHistory: inspectionsIndex.inspections.slice(0, 5)
-      }
-    };
-    
-  } catch (error) {
-    console.error('❌ Error in findVehicleByPlate:', error);
-    return { found: false };
-  }
-}
 
-async function createVehicleFolder(userId, vehicleData) {
-  console.log('🆕 Creating new vehicle folder');
-  
-  const vehicleId = generateUUID();
-  const folderPath = `users/${userId}/vehicles/${vehicleId}`;
-  
-  const vehicleMetadata = {
-    vehicle_id: vehicleId,
-    make: vehicleData.make,
-    model: vehicleData.model,
-    year: vehicleData.year,
-    license_plate: vehicleData.license_plate,
-    color: vehicleData.color,
-    created_at: new Date().toISOString(),
-    owner_history: [{
-      user_id: userId,
-      start_date: new Date().toISOString()
-    }]
-  };
-  
-  await uploadToR2(`${folderPath}/vehicle_info.json`, JSON.stringify(vehicleMetadata, null, 2));
-  
-  const inspectionsIndex = {
-    vehicle_id: vehicleId,
-    total_inspections: 0,
-    inspections: []
-  };
-  
-  await uploadToR2(`${folderPath}/inspections/index.json`, JSON.stringify(inspectionsIndex, null, 2));
-  
-  const { error } = await supabase.from('vehicle_index').insert({
-    user_id: userId,
-    vehicle_id: vehicleId,
-    license_plate: vehicleData.license_plate,
-    make: vehicleData.make,
-    model: vehicleData.model,
-    year: vehicleData.year,
-    color: vehicleData.color,
-    r2_folder_path: folderPath,
-    total_inspections: 0
-  });
-  
-  if (error) {
-    console.error('❌ Error creating vehicle index:', error);
-    throw error;
-  }
-  
-  console.log('✅ Vehicle folder created:', folderPath);
-  return { vehicleId, folderPath };
-}
-
-async function createInspectionFolder(userId, vehicleId, inspectionData) {
-  console.log('📝 Creating inspection folder');
-  
-  const inspectionId = `${new Date().toISOString().split('T')[0]}_insp-${generateUUID().substring(0, 8)}`;
-  const inspectionFolderPath = createDateBasedPath(userId, vehicleId, inspectionId);
-  
-  const inspectionMetadata = {
-    inspection_id: inspectionId,
-    vehicle_id: vehicleId,
-    user_id: userId,
-    inspection_date: new Date().toISOString(),
-    status: 'pending',
-    photos: [],
-    created_at: new Date().toISOString()
-  };
-  
-  await uploadToR2(`${inspectionFolderPath}/metadata.json`, JSON.stringify(inspectionMetadata, null, 2));
-  
-  const { error } = await supabase.from('inspection_index').insert({
-    inspection_id: inspectionId,
-    vehicle_id: vehicleId,
-    user_id: userId,
-    inspection_date: new Date().toISOString().split('T')[0],
-    status: 'pending',
-    r2_folder_path: inspectionFolderPath,
-    photo_count: 0
-  });
-  
-  if (error) {
-    console.error('❌ Error creating inspection index:', error);
-  }
-  
-  console.log('✅ Inspection folder created:', inspectionFolderPath);
-  return { inspectionId, folderPath: inspectionFolderPath };
-}
-
-export const handler = async (event) => {
-  const headers = {
-    'Access-Control-Allow-Origin': 'https://rentalshield.net',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json'
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
-  }
-  
-  try {
-    if (event.httpMethod !== 'POST') {
-      return {
-        statusCode: 405,
-        headers,
-        body: JSON.stringify({ error: 'Method not allowed' })
-      };
-    }
-
-    const { action, userId, vehicleData, inspectionData } = JSON.parse(event.body);
-    console.log('🔧 Vehicle hybrid action:', action, 'for user:', userId);
-    
     switch (action) {
       case 'find_vehicle':
-        const result = await findVehicleByPlate(userId, vehicleData.license_plate);
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify(result)
-        };
-      
-      case 'create_vehicle':
-        const vehicle = await createVehicleFolder(userId, vehicleData);
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({ success: true, ...vehicle })
-        };
+        return await findVehicle(supabaseUrl, headers, userId, vehicleData);
       
       case 'create_inspection':
-        const inspection = await createInspectionFolder(userId, vehicleData.vehicle_id, inspectionData);
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({ success: true, ...inspection })
-        };
+        return await createInspection(supabaseUrl, headers, userId, vehicleData, inspectionData);
       
       default:
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'Unknown action: ' + action })
-        };
+        throw new Error(`Unknown action: ${action}`);
     }
-    
+
   } catch (error) {
-    console.error('❌ Vehicle hybrid error:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: error.message, stack: error.stack })
-    };
+    console.error('Vehicle hybrid error:', error);
+    
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
   }
 };
+
+async function findVehicle(supabaseUrl, headers, userId, vehicleData) {
+  try {
+    const { license_plate } = vehicleData;
+    
+    // Search for vehicle by license plate and user ID
+    const vehicleResponse = await fetch(
+      `${supabaseUrl}/rest/v1/vehicles?user_id=eq.${userId}&license_plate=eq.${license_plate}&select=*`, 
+      { method: 'GET', headers }
+    );
+    
+    if (!vehicleResponse.ok) {
+      throw new Error(`Vehicle search failed: ${vehicleResponse.status}`);
+    }
+    
+    const vehicles = await vehicleResponse.json();
+    
+    if (vehicles.length === 0) {
+      return new Response(JSON.stringify({
+        found: false,
+        message: 'No vehicle found with that license plate'
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
+    
+    const vehicle = vehicles[0];
+    
+    // Get inspection history for this vehicle
+    const inspectionResponse = await fetch(
+      `${supabaseUrl}/rest/v1/inspections?vehicle_id=eq.${vehicle.id}&select=*&order=created_at.desc&limit=5`,
+      { method: 'GET', headers }
+    );
+    
+    let inspectionHistory = [];
+    if (inspectionResponse.ok) {
+      inspectionHistory = await inspectionResponse.json();
+    }
+    
+    return new Response(JSON.stringify({
+      found: true,
+      vehicle: {
+        ...vehicle,
+        inspectionHistory: inspectionHistory,
+        totalInspections: inspectionHistory.length,
+        lastInspection: inspectionHistory[0] || null
+      }
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+    
+  } catch (error) {
+    throw new Error(`Find vehicle error: ${error.message}`);
+  }
+}
+
+async function createInspection(supabaseUrl, headers, userId, vehicleData, inspectionData) {
+  try {
+    const { vehicle_id } = vehicleData;
+    
+    const newInspection = {
+      id: crypto.randomUUID(),
+      user_id: userId,
+      vehicle_id: vehicle_id,
+      inspection_date: inspectionData.inspection_date || new Date().toISOString(),
+      status: inspectionData.status || 'pending',
+      created_at: new Date().toISOString()
+    };
+    
+    const response = await fetch(`${supabaseUrl}/rest/v1/inspections`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(newInspection)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Inspection creation failed: ${response.status} - ${errorText}`);
+    }
+    
+    const createdInspection = await response.json();
+    
+    return new Response(JSON.stringify({
+      success: true,
+      inspectionId: newInspection.id,
+      inspection: createdInspection[0] || newInspection
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+    
+  } catch (error) {
+    throw new Error(`Create inspection error: ${error.message}`);
+  }
+}
