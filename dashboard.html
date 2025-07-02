@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RentalShield - Dashboard</title>
-    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -81,13 +81,26 @@
         .logout-btn:hover {
             background: #c82333;
         }
+        .user-role {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="logo">🛡️ RentalShield</div>
         <div class="user-info">
-            <span id="user-name">Loading...</span>
+            <span id="user-name" class="loading">Loading...</span>
+            <span id="user-role" class="user-role" style="display: none;"></span>
             <button class="logout-btn" onclick="handleLogout()">Logout</button>
         </div>
     </div>
@@ -104,50 +117,108 @@
         <div id="vehicles-section">
             <h2>Your Vehicles</h2>
             <div id="vehicles-grid" class="vehicles-grid">
-                <!-- Vehicles will be loaded here -->
                 <div class="vehicle-card">
-                    <h3>No vehicles yet</h3>
-                    <p>Start your first inspection to add a vehicle</p>
+                    <h3>Loading vehicles...</h3>
+                    <p>Please wait while we load your vehicle history</p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        // Initialize Supabase with your credentials
+        const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
         let currentUser = null;
 
-        // Initialize and check authentication
-        netlifyIdentity.on('init', user => {
-            if (!user) {
+        // Check authentication and load user data
+        async function checkAuth() {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
                 // No user logged in, redirect to auth
                 window.location.href = '/auth.html';
                 return;
             }
             
-            currentUser = user;
-            displayUserInfo(user);
+            currentUser = session.user;
+            await displayUserInfo(session.user);
             loadUserVehicles();
-        });
-
-        // Display user information
-        function displayUserInfo(user) {
-            const userName = user.user_metadata?.full_name || user.email;
-            document.getElementById('user-name').textContent = userName;
         }
 
-        // Load user's vehicles (placeholder for now)
-        function loadUserVehicles() {
-            // This will connect to your R2 storage later
-            console.log('Loading vehicles for user:', currentUser.id);
+        // Display user information
+        async function displayUserInfo(user) {
+            const userNameEl = document.getElementById('user-name');
+            const userRoleEl = document.getElementById('user-role');
             
-            // For now, show placeholder
+            // Set user name/email
+            const userName = user.user_metadata?.full_name || user.email;
+            userNameEl.textContent = userName;
+            userNameEl.classList.remove('loading');
+            
+            // Get user role from database
+            try {
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (userData && userData.role) {
+                    userRoleEl.textContent = userData.role;
+                    userRoleEl.style.display = 'inline';
+                } else {
+                    userRoleEl.textContent = 'user';
+                    userRoleEl.style.display = 'inline';
+                }
+            } catch (error) {
+                console.log('Could not fetch user role:', error);
+                userRoleEl.textContent = 'user';
+                userRoleEl.style.display = 'inline';
+            }
+        }
+
+        // Load user's vehicles
+        async function loadUserVehicles() {
             const vehiclesGrid = document.getElementById('vehicles-grid');
-            vehiclesGrid.innerHTML = `
-                <div class="vehicle-card">
-                    <h3>Coming Soon</h3>
-                    <p>Vehicle history will appear here after your first inspection</p>
-                </div>
-            `;
+            
+            try {
+                // Try to load vehicles from database
+                const { data: vehicles, error } = await supabase
+                    .from('vehicles')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
+                
+                if (vehicles && vehicles.length > 0) {
+                    // Display vehicles
+                    vehiclesGrid.innerHTML = vehicles.map(vehicle => `
+                        <div class="vehicle-card">
+                            <h3>${vehicle.make || 'Unknown'} ${vehicle.model || 'Vehicle'}</h3>
+                            <p>License: ${vehicle.license_plate || 'N/A'}</p>
+                            <p>VIN: ${vehicle.vin || 'N/A'}</p>
+                            <button onclick="viewVehicle('${vehicle.id}')">View Details</button>
+                        </div>
+                    `).join('');
+                } else {
+                    // No vehicles yet
+                    vehiclesGrid.innerHTML = `
+                        <div class="vehicle-card">
+                            <h3>No vehicles yet</h3>
+                            <p>Start your first inspection to add a vehicle</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.log('Could not load vehicles:', error);
+                vehiclesGrid.innerHTML = `
+                    <div class="vehicle-card">
+                        <h3>Coming Soon</h3>
+                        <p>Vehicle history will appear here after your first inspection</p>
+                    </div>
+                `;
+            }
         }
 
         // Start new inspection
@@ -163,18 +234,28 @@
             window.location.href = '/index.html';
         }
 
-        // Handle logout
-        function handleLogout() {
-            netlifyIdentity.logout();
+        // View vehicle details
+        function viewVehicle(vehicleId) {
+            console.log('Viewing vehicle:', vehicleId);
+            // TODO: Implement vehicle detail view
+            alert('Vehicle details coming soon!');
         }
 
-        // Handle logout event
-        netlifyIdentity.on('logout', () => {
+        // Handle logout
+        async function handleLogout() {
+            await supabase.auth.signOut();
             window.location.href = '/auth.html';
+        }
+
+        // Listen for auth state changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || !session) {
+                window.location.href = '/auth.html';
+            }
         });
 
-        // Initialize
-        netlifyIdentity.init();
+        // Initialize on page load
+        checkAuth();
     </script>
 </body>
 </html>
