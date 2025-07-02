@@ -286,25 +286,16 @@
     <script>
         console.log('🏢 Vehicle Inspection System Starting...');
         
-        // API Configuration
+        // API Configuration - Edge Functions
         const API_ENDPOINTS = {
-            getConfig: 'https://api.rentalshield.net/.netlify/functions/get-config',
-            detectVehicle: 'https://api.rentalshield.net/.netlify/functions/gpt-vehicle-detect',
-            uploadPhoto: 'https://api.rentalshield.net/.netlify/functions/upload-to-r2',
-            vehicleHybrid: 'https://api.rentalshield.net/.netlify/functions/vehicle-hybrid'
+            getConfig: '/api/config',
+            detectVehicle: '/api/detect-vehicle',
+            uploadPhoto: '/api/upload-photo',
+            vehicleHybrid: '/api/vehicle'
         };
-        
-        const FALLBACK_ENDPOINTS = {
-            getConfig: '/.netlify/functions/get-config',
-            detectVehicle: '/.netlify/functions/gpt-vehicle-detect',
-            uploadPhoto: '/.netlify/functions/upload-to-r2',
-            vehicleHybrid: '/.netlify/functions/vehicle-hybrid'
-        };
-        
-        let useApiSubdomain = true;
         
         function getEndpoint(name) {
-            return useApiSubdomain ? API_ENDPOINTS[name] : FALLBACK_ENDPOINTS[name];
+            return API_ENDPOINTS[name];
         }
 
         // n8n Webhook URL
@@ -442,30 +433,15 @@
             try {
                 console.log('🔍 Checking vehicle for plate:', detectedPlate);
                 
-                let response;
-                try {
-                    response = await fetch(getEndpoint('vehicleHybrid'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action: 'find_vehicle',
-                            userId: currentUser.id,
-                            vehicleData: { license_plate: detectedPlate }
-                        })
-                    });
-                } catch (corsError) {
-                    console.log('🔄 CORS failed, trying fallback endpoint...');
-                    useApiSubdomain = false;
-                    response = await fetch(getEndpoint('vehicleHybrid'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action: 'find_vehicle',
-                            userId: currentUser.id,
-                            vehicleData: { license_plate: detectedPlate }
-                        })
-                    });
-                }
+                const response = await fetch(getEndpoint('vehicleHybrid'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'find_vehicle',
+                        userId: currentUser.id,
+                        vehicleData: { license_plate: detectedPlate }
+                    })
+                });
                 
                 const result = await response.json();
                 
@@ -487,38 +463,19 @@
             try {
                 console.log('📝 Creating inspection...');
                 
-                let response;
-                try {
-                    response = await fetch(getEndpoint('vehicleHybrid'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action: 'create_inspection',
-                            userId: currentUser.id,
-                            vehicleData: { vehicle_id: currentVehicleId },
-                            inspectionData: {
-                                inspection_date: new Date().toISOString(),
-                                status: 'pending'
-                            }
-                        })
-                    });
-                } catch (corsError) {
-                    console.log('🔄 CORS failed, trying fallback endpoint...');
-                    useApiSubdomain = false;
-                    response = await fetch(getEndpoint('vehicleHybrid'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action: 'create_inspection',
-                            userId: currentUser.id,
-                            vehicleData: { vehicle_id: currentVehicleId },
-                            inspectionData: {
-                                inspection_date: new Date().toISOString(),
-                                status: 'pending'
-                            }
-                        })
-                    });
-                }
+                const response = await fetch(getEndpoint('vehicleHybrid'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'create_inspection',
+                        userId: currentUser.id,
+                        vehicleData: { vehicle_id: currentVehicleId },
+                        inspectionData: {
+                            inspection_date: new Date().toISOString(),
+                            status: 'pending'
+                        }
+                    })
+                });
                 
                 const result = await response.json();
                 
@@ -577,28 +534,14 @@
                 const imageData = canvas.toDataURL('image/jpeg', 0.8);
                 const base64 = imageData.split(',')[1];
                 
-                let response;
-                try {
-                    response = await fetch(getEndpoint('detectVehicle'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            imageBase64: base64,
-                            userId: currentUser.id
-                        })
-                    });
-                } catch (corsError) {
-                    console.log('🔄 CORS failed, trying fallback endpoint...');
-                    useApiSubdomain = false;
-                    response = await fetch(getEndpoint('detectVehicle'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            imageBase64: base64,
-                            userId: currentUser.id
-                        })
-                    });
-                }
+                const response = await fetch(getEndpoint('detectVehicle'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageBase64: base64,
+                        userId: currentUser.id
+                    })
+                });
                 
                 const result = await response.json();
                 console.log('🤖 GPT result:', result);
@@ -621,6 +564,21 @@
                         result.vehicle.id = generateUUID();
                         result.vehicle.inspectionHistory = [];
                         result.vehicle.totalInspections = 0;
+                        
+                        showNewVehicleConfirmation(result.vehicle);
+                    }
+                } else {
+                    console.log('❌ Detection failed, showing manual entry');
+                    statusBar.textContent = "Detection failed - manual entry";
+                    showSimpleVehicleEntry();
+                }
+                
+            } catch (error) {
+                console.error('❌ Detection error:', error);
+                statusBar.textContent = "Detection failed - manual entry";
+                showSimpleVehicleEntry();
+            }
+        }ections = 0;
                         
                         showNewVehicleConfirmation(result.vehicle);
                     }
