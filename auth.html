@@ -126,7 +126,7 @@
                 const { error } = await supabase.auth.signInWithOtp({
                     email: email,
                     options: {
-                        emailRedirectTo: window.location.origin + '/dashboard.html'
+                        emailRedirectTo: 'https://rentalshield.net/dashboard.html'
                     }
                 });
                 
