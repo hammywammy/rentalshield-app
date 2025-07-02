@@ -1,8 +1,7 @@
 [build]
   publish = "."
-  command = ""
 
-# Edge Functions Configuration
+# Edge Functions Configuration  
 [[edge_functions]]
   function = "get-config"
   path = "/api/config"
@@ -19,18 +18,6 @@
   function = "vehicle-hybrid"
   path = "/api/vehicle"
 
-[[edge_functions]]
-  function = "create-manifest"
-  path = "/api/create-manifest" 
-
-[[edge_functions]]
-  function = "sync-to-supabase"
-  path = "/api/sync-supabase"
-
-[[edge_functions]]
-  function = "health"
-  path = "/api/health"
-
 # Headers for security
 [[headers]]
   for = "/*"
@@ -40,9 +27,13 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# Redirects
+# Only redirect unknown routes (not actual files)
 [[redirects]]
-  from = "/*"
+  from = "/app/*"
   to = "/index.html"
   status = 200
-  conditions = {Role = [""]}
+
+[[redirects]]
+  from = "/dashboard/*"
+  to = "/dashboard.html"
+  status = 200
