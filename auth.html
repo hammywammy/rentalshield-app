@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RentalShield - Login</title>
-    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -28,6 +28,15 @@
             color: #333;
             margin-bottom: 2rem;
         }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
         button {
             background: #667eea;
             color: white;
@@ -38,9 +47,30 @@
             font-size: 16px;
             margin: 10px;
             min-width: 120px;
+            width: 100%;
         }
         button:hover {
             background: #5a6fd8;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .message {
+            margin-top: 1rem;
+            padding: 10px;
+            border-radius: 6px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
     </style>
 </head>
@@ -49,8 +79,17 @@
         <h1>🛡️ RentalShield</h1>
         <p>Professional vehicle inspections in 5 minutes</p>
         
-        <button onclick="netlifyIdentity.open('login')">Login</button>
-        <button onclick="netlifyIdentity.open('signup')">Sign Up</button>
+        <form id="auth-form">
+            <input 
+                type="email" 
+                id="email" 
+                placeholder="Enter your email address" 
+                required
+            >
+            <button type="submit" id="submit-btn">Send Magic Link</button>
+        </form>
+        
+        <div id="message" class="message"></div>
         
         <p style="margin-top: 2rem; font-size: 14px; color: #666;">
             Secure your rental vehicles with professional documentation
@@ -58,33 +97,62 @@
     </div>
 
     <script>
+        // Initialize Supabase - REPLACE WITH YOUR ACTUAL CREDENTIALS
+        const supabaseUrl = 'YOUR_SUPABASE_URL';
+        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
         // Check if user is already logged in
-        netlifyIdentity.on('init', user => {
-            if (user) {
-                // User is logged in, redirect to dashboard
+        async function checkAuth() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
                 window.location.href = '/dashboard.html';
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const submitBtn = document.getElementById('submit-btn');
+            const messageDiv = document.getElementById('message');
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+            
+            try {
+                const { error } = await supabase.auth.signInWithOtp({
+                    email: email,
+                    options: {
+                        emailRedirectTo: window.location.origin + '/dashboard.html'
+                    }
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Success
+                messageDiv.className = 'message success';
+                messageDiv.style.display = 'block';
+                messageDiv.textContent = 'Check your email for the login link!';
+                
+            } catch (error) {
+                // Error
+                messageDiv.className = 'message error';
+                messageDiv.style.display = 'block';
+                messageDiv.textContent = `Error: ${error.message}`;
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Magic Link';
             }
         });
 
-        // Handle successful login
-        netlifyIdentity.on('login', user => {
-            console.log('Login successful:', user);
-            window.location.href = '/dashboard.html';
-        });
-
-        // Handle successful signup
-        netlifyIdentity.on('signup', user => {
-            console.log('Signup successful:', user);
-            netlifyIdentity.gotrue.currentUser().update({
-                data: { 
-                    full_name: user.user_metadata.full_name,
-                    avatar_url: user.user_metadata.avatar_url 
-                }
-            });
-        });
-
         // Initialize
-        netlifyIdentity.init();
+        checkAuth();
     </script>
 </body>
 </html>
