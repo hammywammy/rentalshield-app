@@ -2,8 +2,7 @@ export const handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': 'https://rentalshield.net',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Content-Type': 'application/json'
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
   };
 
   if (event.httpMethod === 'OPTIONS') {
