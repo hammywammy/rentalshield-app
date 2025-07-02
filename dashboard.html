@@ -41,16 +41,38 @@
             margin-bottom: 2rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .new-inspection-btn {
-            background: #667eea;
-            color: white;
+        .dashboard-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        .btn {
             border: none;
             padding: 16px 32px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 18px;
             font-weight: bold;
-            margin-top: 1rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
         }
         .vehicles-grid {
             display: grid;
@@ -93,6 +115,39 @@
             color: #666;
             font-style: italic;
         }
+        .dashboard-summary {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-card {
+            text-align: center;
+        }
+        .view-all-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .view-all-link:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+            .container {
+                padding: 0 1rem;
+            }
+            .dashboard-actions {
+                flex-direction: column;
+            }
+            .btn {
+                text-align: center;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -109,9 +164,23 @@
         <div class="welcome">
             <h1>Welcome to your Dashboard</h1>
             <p>Manage your vehicle inspections and documentation</p>
-            <button class="new-inspection-btn" onclick="startNewInspection()">
-                📱 Start New Inspection
-            </button>
+            
+            <div class="dashboard-actions">
+                <a href="/inspection.html" class="btn btn-primary">
+                    📱 Start New Inspection
+                </a>
+                <a href="/reports.html" class="btn btn-secondary">
+                    📋 View My Reports
+                </a>
+            </div>
+        </div>
+
+        <div class="dashboard-summary">
+            <div class="summary-card">
+                <h3>Recent Reports</h3>
+                <p id="reports-count">Loading...</p>
+                <a href="/reports.html" class="view-all-link">View All Reports →</a>
+            </div>
         </div>
 
         <div id="vehicles-section">
@@ -135,17 +204,25 @@
 
         // Check authentication and load user data
         async function checkAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (!session) {
-                // No user logged in, redirect to auth
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (!session) {
+                    // No user logged in, redirect to auth
+                    console.log('No session found, redirecting to auth');
+                    window.location.href = '/auth.html';
+                    return;
+                }
+                
+                currentUser = session.user;
+                console.log('User authenticated:', currentUser.email);
+                await displayUserInfo(session.user);
+                loadUserVehicles();
+                loadReportsSummary();
+            } catch (error) {
+                console.error('Auth check error:', error);
                 window.location.href = '/auth.html';
-                return;
             }
-            
-            currentUser = session.user;
-            await displayUserInfo(session.user);
-            loadUserVehicles();
         }
 
         // Display user information
@@ -180,6 +257,32 @@
             }
         }
 
+        // Load reports summary
+        async function loadReportsSummary() {
+            try {
+                const { data: reports, error } = await supabase
+                    .from('reports')
+                    .select('id, created_at, damage_detected')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                if (error) throw error;
+
+                const totalReports = reports.length;
+                const damageReports = reports.filter(r => r.damage_detected).length;
+                
+                document.getElementById('reports-count').innerHTML = `
+                    ${totalReports} total reports<br>
+                    <small>${damageReports} with damage detected</small>
+                `;
+
+            } catch (error) {
+                console.log('Could not load reports summary:', error);
+                document.getElementById('reports-count').textContent = 'Unable to load reports';
+            }
+        }
+
         // Load user's vehicles
         async function loadUserVehicles() {
             const vehiclesGrid = document.getElementById('vehicles-grid');
@@ -207,6 +310,7 @@
                         <div class="vehicle-card">
                             <h3>No vehicles yet</h3>
                             <p>Start your first inspection to add a vehicle</p>
+                            <a href="/inspection.html" style="color: #667eea; text-decoration: none;">Start First Inspection →</a>
                         </div>
                     `;
                 }
@@ -221,27 +325,6 @@
             }
         }
 
-        // Start new inspection
-        function startNewInspection() {
-    console.log('📊 DASHBOARD: Start inspection clicked');
-    console.log('📊 DASHBOARD: Current user:', currentUser);
-    
-    // Store user info for inspection
-    const userData = {
-        id: currentUser.id,
-        email: currentUser.email,
-        name: currentUser.user_metadata?.full_name || currentUser.email
-    };
-    
-    localStorage.setItem('currentUser', JSON.stringify(userData));
-    console.log('📊 DASHBOARD: Stored user in localStorage:', userData);
-    
-    // Redirect to inspection page
-    console.log('📊 DASHBOARD: Redirecting to /inspection.html');
-    window.location.href = '/inspection.html';
-}l';  // ← Changed from '/index.html'
-}
-
         // View vehicle details
         function viewVehicle(vehicleId) {
             console.log('Viewing vehicle:', vehicleId);
@@ -251,18 +334,25 @@
 
         // Handle logout
         async function handleLogout() {
-            await supabase.auth.signOut();
-            window.location.href = '/auth.html';
+            try {
+                await supabase.auth.signOut();
+                window.location.href = '/auth.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/auth.html';
+            }
         }
 
         // Listen for auth state changes
         supabase.auth.onAuthStateChange((event, session) => {
+            console.log('Auth state changed:', event);
             if (event === 'SIGNED_OUT' || !session) {
                 window.location.href = '/auth.html';
             }
         });
 
         // Initialize on page load
+        console.log('Dashboard loading...');
         checkAuth();
     </script>
 </body>
