@@ -1,0 +1,36 @@
+[build]
+  publish = "."
+  command = ""
+
+# Edge Functions Configuration
+[[edge_functions]]
+  function = "get-config"
+  path = "/api/config"
+
+[[edge_functions]]
+  function = "gpt-vehicle-detect"
+  path = "/api/detect-vehicle"
+
+[[edge_functions]]
+  function = "upload-to-r2"
+  path = "/api/upload-photo"
+
+[[edge_functions]]
+  function = "vehicle-hybrid"
+  path = "/api/vehicle"
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Redirects
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Role = [""]}
