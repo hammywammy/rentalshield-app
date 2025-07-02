@@ -397,7 +397,7 @@
                 supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
                 console.log('✅ Supabase initialized via API subdomain');
             } catch (error) {
-                console.log('⚠️ API subdomain failed, trying fallback...');
+                console.log('⚠️ API subdomain failed, using fallback...');
                 useApiSubdomain = false;
                 
                 try {
@@ -411,7 +411,8 @@
                     const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
                     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
                     supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                    console.log('✅ Supabase initialized with fallback credentials');
+                    useApiSubdomain = false; // Force fallback mode for all subsequent calls
+                    console.log('✅ Supabase initialized with fallback credentials - using local endpoints');
                 }
             }
         }
@@ -441,15 +442,30 @@
             try {
                 console.log('🔍 Checking vehicle for plate:', detectedPlate);
                 
-                const response = await fetch(getEndpoint('vehicleHybrid'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'find_vehicle',
-                        userId: currentUser.id,
-                        vehicleData: { license_plate: detectedPlate }
-                    })
-                });
+                let response;
+                try {
+                    response = await fetch(getEndpoint('vehicleHybrid'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'find_vehicle',
+                            userId: currentUser.id,
+                            vehicleData: { license_plate: detectedPlate }
+                        })
+                    });
+                } catch (corsError) {
+                    console.log('🔄 CORS failed, trying fallback endpoint...');
+                    useApiSubdomain = false;
+                    response = await fetch(getEndpoint('vehicleHybrid'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'find_vehicle',
+                            userId: currentUser.id,
+                            vehicleData: { license_plate: detectedPlate }
+                        })
+                    });
+                }
                 
                 const result = await response.json();
                 
@@ -471,19 +487,38 @@
             try {
                 console.log('📝 Creating inspection...');
                 
-                const response = await fetch(getEndpoint('vehicleHybrid'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'create_inspection',
-                        userId: currentUser.id,
-                        vehicleData: { vehicle_id: currentVehicleId },
-                        inspectionData: {
-                            inspection_date: new Date().toISOString(),
-                            status: 'pending'
-                        }
-                    })
-                });
+                let response;
+                try {
+                    response = await fetch(getEndpoint('vehicleHybrid'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'create_inspection',
+                            userId: currentUser.id,
+                            vehicleData: { vehicle_id: currentVehicleId },
+                            inspectionData: {
+                                inspection_date: new Date().toISOString(),
+                                status: 'pending'
+                            }
+                        })
+                    });
+                } catch (corsError) {
+                    console.log('🔄 CORS failed, trying fallback endpoint...');
+                    useApiSubdomain = false;
+                    response = await fetch(getEndpoint('vehicleHybrid'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'create_inspection',
+                            userId: currentUser.id,
+                            vehicleData: { vehicle_id: currentVehicleId },
+                            inspectionData: {
+                                inspection_date: new Date().toISOString(),
+                                status: 'pending'
+                            }
+                        })
+                    });
+                }
                 
                 const result = await response.json();
                 
@@ -542,14 +577,28 @@
                 const imageData = canvas.toDataURL('image/jpeg', 0.8);
                 const base64 = imageData.split(',')[1];
                 
-                const response = await fetch(getEndpoint('detectVehicle'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        imageBase64: base64,
-                        userId: currentUser.id
-                    })
-                });
+                let response;
+                try {
+                    response = await fetch(getEndpoint('detectVehicle'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            imageBase64: base64,
+                            userId: currentUser.id
+                        })
+                    });
+                } catch (corsError) {
+                    console.log('🔄 CORS failed, trying fallback endpoint...');
+                    useApiSubdomain = false;
+                    response = await fetch(getEndpoint('detectVehicle'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            imageBase64: base64,
+                            userId: currentUser.id
+                        })
+                    });
+                }
                 
                 const result = await response.json();
                 console.log('🤖 GPT result:', result);
@@ -772,6 +821,13 @@
                         const response = await fetch(getEndpoint('uploadPhoto'), {
                             method: 'POST',
                             body: formData
+                        }).catch(async (corsError) => {
+                            console.log('🔄 Upload CORS failed, trying fallback endpoint...');
+                            useApiSubdomain = false;
+                            return await fetch(getEndpoint('uploadPhoto'), {
+                                method: 'POST',
+                                body: formData
+                            });
                         });
 
                         if (response.ok) {
