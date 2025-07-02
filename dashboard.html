@@ -223,16 +223,16 @@
 
         // Start new inspection
         function startNewInspection() {
-            // Store user info for inspection
-            localStorage.setItem('currentUser', JSON.stringify({
-                id: currentUser.id,
-                email: currentUser.email,
-                name: currentUser.user_metadata?.full_name || currentUser.email
-            }));
-            
-            // Redirect to inspection page
-            window.location.href = '/index.html';
-        }
+    // Store user info for inspection
+    localStorage.setItem('currentUser', JSON.stringify({
+        id: currentUser.id,
+        email: currentUser.email,
+        name: currentUser.user_metadata?.full_name || currentUser.email
+    }));
+    
+    // Redirect to inspection page
+    window.location.href = '/inspection.html';  // ← Changed from '/index.html'
+}
 
         // View vehicle details
         function viewVehicle(vehicleId) {
