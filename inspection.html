@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Inspection - RentalShield</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: black;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        
+        video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            background: #000;
+        }
+        
+        /* Start screen */
+        #start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 100;
+            padding: 2rem;
+        }
+        
+        #start-screen h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .user-info-display {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .btn {
+            padding: 1rem 2rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 0.5rem;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-secondary {
+            background: #666;
+        }
+        
+        .btn-secondary:hover {
+            background: #555;
+        }
+        
+        /* UI elements */
+        #status-bar {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 50;
+            display: none;
+        }
+        
+        #step-instruction {
+            position: fixed;
+            bottom: 140px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 50;
+            display: none;
+        }
+        
+        #photo-button,
+        #next-button {
+            position: fixed;
+            bottom: 30px;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            z-index: 50;
+            display: none;
+            transition: background 0.2s;
+        }
+        
+        #photo-button {
+            left: 50%;
+            transform: translateX(-50%);
+            background: #007bff;
+        }
+        
+        #photo-button:hover {
+            background: #0056b3;
+        }
+        
+        #next-button {
+            right: 30px;
+            background: #28a745;
+        }
+        
+        #next-button:hover {
+            background: #1e7e34;
+        }
+        
+        #next-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .flash-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: white;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.1s;
+        }
+        
+        .flash-effect.active {
+            opacity: 0.8;
+        }
+        
+        /* Vehicle popup styles */
+        .vehicle-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            z-index: 500;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            color: #333;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .popup-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        
+        .popup-btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        
+        .btn-yes {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-yes:hover {
+            background: #1e7e34;
+        }
+        
+        .btn-no {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-no:hover {
+            background: #c82333;
+        }
+        
+        .manual-form {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: left;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .form-row input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        .form-row label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .popup-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <video id="video" autoplay muted playsinline></video>
+    <div id="flash-effect" class="flash-effect"></div>
+
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <h1>🛡️ Vehicle Inspection</h1>
+        <div class="user-info-display">
+            <p>Logged in as: <span id="user-email">Loading...</span></p>
+            <p>Ready to start professional inspection</p>
+        </div>
+        <button id="start-inspection-btn" class="btn">Start Inspection</button>
+        <a href="/" class="btn btn-secondary">← Back to Home</a>
+    </div>
+
+    <!-- Status and Controls -->
+    <div id="status-bar">Ready</div>
+    <div id="step-instruction">Loading...</div>
+    <button id="photo-button">Take Photo</button>
+    <button id="next-button" disabled>Next Step</button>
+
+    <script>
+        console.log('🏢 Vehicle Inspection System Starting...');
+        
+        // Generate UUID
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Check vehicle with hybrid system
+        async function checkSpecificVehicle(detectedPlate) {
+            try {
+                console.log('🔍 Checking vehicle for plate:', detectedPlate);
+                
+                const response = await fetch(getEndpoint('vehicleHybrid'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'find_vehicle',
+                        userId: currentUser.id,
+                        vehicleData: { license_plate: detectedPlate }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.found) {
+                    console.log('✅ Found existing vehicle:', result.vehicle);
+                    return result.vehicle;
+                } else {
+                    console.log('❌ No vehicle found for plate:', detectedPlate);
+                    return null;
+                }
+            } catch (error) {
+                console.error('❌ Error checking vehicle:', error);
+                return null;
+            }
+        }
+
+        // Create inspection
+        async function createInspection() {
+            try {
+                console.log('📝 Creating inspection...');
+                
+                const response = await fetch(getEndpoint('vehicleHybrid'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'create_inspection',
+                        userId: currentUser.id,
+                        vehicleData: { vehicle_id: currentVehicleId },
+                        inspectionData: {
+                            inspection_date: new Date().toISOString(),
+                            status: 'pending'
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentInspectionId = result.inspectionId;
+                    console.log('✅ Created inspection:', result.inspectionId);
+                } else {
+                    currentInspectionId = generateUUID();
+                    console.log('⚠️ Using fallback inspection ID');
+                }
+            } catch (error) {
+                console.error('❌ Error creating inspection:', error);
+                currentInspectionId = generateUUID();
+            }
+        }
+
+        // Start inspection
+        async function startInspection() {
+            console.log('🚀 Starting inspection');
+            inspectionStarted = true;
+            
+            startScreen.style.display = "none";
+            statusBar.style.display = "block";
+            stepInstruction.style.display = "block";
+            photoButton.style.display = "block";
+            nextButton.style.display = "block";
+            
+            currentStep = -1;
+            updateStep();
+        }
+
+        // Update step
+        function updateStep() {
+            if (currentStep === -1) {
+                stepInstruction.textContent = "Step 0: Take license plate photo";
+                statusBar.textContent = "License plate detection ready";
+            } else {
+                const step = steps[currentStep];
+                stepInstruction.textContent = `Step ${currentStep + 1}/18: ${step.name.replace(/_/g, ' ')} (${step.category})`;
+                statusBar.textContent = "Ready for photo";
+            }
+            nextButton.disabled = true;
+        }
+
+        // License plate detection
+        async function detectLicensePlate() {
+            try {
+                statusBar.textContent = "🤖 Analyzing with GPT-4o...";
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                ctx.drawImage(video, 0, 0);
+                
+                const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                const base64 = imageData.split(',')[1];
+                
+                const response = await fetch(getEndpoint('detectVehicle'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageBase64: base64,
+                        userId: currentUser.id
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('🤖 GPT result:', result);
+                
+                if (result.success && result.vehicle) {
+                    statusBar.textContent = "✅ Vehicle detected - checking database...";
+                    
+                    const existingVehicle = await checkSpecificVehicle(result.vehicle.license_plate);
+                    
+                    if (existingVehicle) {
+                        console.log('📋 Found existing vehicle');
+                        result.vehicle.id = existingVehicle.id;
+                        result.vehicle.inspectionHistory = existingVehicle.inspectionHistory || [];
+                        result.vehicle.totalInspections = existingVehicle.inspectionHistory?.length || 0;
+                        result.vehicle.lastInspection = existingVehicle.inspectionHistory?.[0] || null;
+                        
+                        showVehicleHistoryConfirmation(result.vehicle);
+                    } else {
+                        console.log('🆕 New vehicle detected');
+                        result.vehicle.id = generateUUID();
+                        result.vehicle.inspectionHistory = [];
+                        result.vehicle.totalInspections = 0;
+                        
+                        showNewVehicleConfirmation(result.vehicle);
+                    }
+                } else {
+                    console.log('❌ Detection failed, showing manual entry');
+                    statusBar.textContent = "Detection failed - manual entry";
+                    showSimpleVehicleEntry();
+                }
+                
+            } catch (error) {
+                console.error('❌ Detection error:', error);
+                statusBar.textContent = "Detection failed - manual entry";
+                showSimpleVehicleEntry();
+            }
+        }
+
+        // Show vehicle confirmation popups
+        function showVehicleHistoryConfirmation(vehicleData) {
+            const popup = document.createElement('div');
+            popup.className = 'vehicle-popup';
+            popup.id = 'vehicle-confirmation';
+            
+            let lastInspectionText = '';
+            if (vehicleData.lastInspection) {
+                const lastDate = new Date(vehicleData.lastInspection.inspection_date || vehicleData.lastInspection.timestamp).toLocaleDateString();
+                lastInspectionText = `<p>Last inspection: ${lastDate}</p>`;
+            }
+            
+            popup.innerHTML = `
+                <h3>Found Existing Vehicle</h3>
+                <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
+                <p>${vehicleData.color} • ${vehicleData.license_plate}</p>
+                ${lastInspectionText}
+                <p>${vehicleData.totalInspections} previous inspections</p>
+                <div class="popup-buttons">
+                    <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">Yes, correct</button>
+                    <button class="popup-btn btn-no" onclick="confirmVehicle(false)">No, different</button>
+                </div>
+            `;
+            
+            detectedVehicle = vehicleData;
+            document.body.appendChild(popup);
+        }
+
+        function showNewVehicleConfirmation(vehicleData) {
+            const popup = document.createElement('div');
+            popup.className = 'vehicle-popup';
+            popup.id = 'vehicle-confirmation';
+            
+            popup.innerHTML = `
+                <h3>New Vehicle Detected</h3>
+                <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
+                <p>${vehicleData.color} • ${vehicleData.license_plate}</p>
+                <p>First inspection for this vehicle</p>
+                <div class="popup-buttons">
+                    <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">Add vehicle</button>
+                    <button class="popup-btn btn-no" onclick="confirmVehicle(false)">Correct info</button>
+                </div>
+            `;
+            
+            detectedVehicle = vehicleData;
+            document.body.appendChild(popup);
+        }
+
+        function showSimpleVehicleEntry() {
+            const popup = document.createElement('div');
+            popup.className = 'vehicle-popup';
+            popup.id = 'vehicle-entry';
+            popup.innerHTML = `
+                <h3>Enter Vehicle Details</h3>
+                <div class="manual-form">
+                    <div class="form-row">
+                        <div><label>License Plate</label><input type="text" id="manual-plate" placeholder="1393"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Make</label><input type="text" id="manual-make" placeholder="Cadillac"></div>
+                        <div><label>Model</label><input type="text" id="manual-model" placeholder="SRX"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Year</label><input type="number" id="manual-year" placeholder="2016"></div>
+                        <div><label>Color</label><input type="text" id="manual-color" placeholder="Dark Blue Gray"></div>
+                    </div>
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn btn-yes" onclick="saveVehicleDetails()">Save</button>
+                </div>
+            `;
+            
+            document.body.appendChild(popup);
+        }
+
+        // Global popup functions
+        window.confirmVehicle = async function(confirmed) {
+            const popup = document.getElementById('vehicle-confirmation');
+            if (popup) popup.remove();
+            
+            if (confirmed) {
+                vehicleInfo = detectedVehicle;
+                currentVehicleId = detectedVehicle.id;
+                
+                await createInspection();
+                
+                const isNew = detectedVehicle.totalInspections === 0;
+                statusBar.textContent = isNew ? 
+                    "✅ New vehicle added" : 
+                    `✅ Vehicle confirmed - inspection #${detectedVehicle.totalInspections + 1}`;
+                
+                currentStep = 0;
+                updateStep();
+                nextButton.disabled = false;
+            } else {
+                showSimpleVehicleEntry();
+            }
+        };
+
+        window.saveVehicleDetails = async function() {
+            const make = document.getElementById('manual-make').value.trim();
+            const model = document.getElementById('manual-model').value.trim();
+            const year = parseInt(document.getElementById('manual-year').value.trim());
+            const color = document.getElementById('manual-color').value.trim();
+            const license_plate = document.getElementById('manual-plate').value.trim();
+            
+            if (!make || !model || !year || !color || !license_plate) {
+                alert('Please fill all fields');
+                return;
+            }
+            
+            const existingVehicle = await checkSpecificVehicle(license_plate);
+            
+            if (existingVehicle) {
+                detectedVehicle = {
+                    make, model, year, color, license_plate,
+                    id: existingVehicle.id,
+                    inspectionHistory: existingVehicle.inspectionHistory || [],
+                    totalInspections: existingVehicle.inspectionHistory?.length || 0
+                };
+                statusBar.textContent = `✅ Vehicle found - inspection #${detectedVehicle.totalInspections + 1}`;
+            } else {
+                detectedVehicle = { make, model, year, color, license_plate };
+                detectedVehicle.id = generateUUID();
+                detectedVehicle.inspectionHistory = [];
+                detectedVehicle.totalInspections = 0;
+                statusBar.textContent = "✅ New vehicle created";
+            }
+            
+            vehicleInfo = detectedVehicle;
+            currentVehicleId = detectedVehicle.id;
+            
+            const popup = document.getElementById('vehicle-entry');
+            if (popup) popup.remove();
+            
+            await createInspection();
+            
+            currentStep = 0;
+            updateStep();
+            nextButton.disabled = false;
+        };
+
+        // Upload to R2 with user data
+        async function uploadToR2() {
+            try {
+                const step = steps[currentStep];
+                statusBar.textContent = `📤 Uploading ${step.category} photo...`;
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                ctx.drawImage(video, 0, 0);
+                
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        statusBar.textContent = "❌ Failed to capture photo";
+                        return;
+                    }
+                    
+                    const stepName = step.name;
+                    const stepNumber = currentStep + 1;
+                    const fileName = `step-${stepNumber.toString().padStart(2, '0')}_${stepName.replace(/_/g, '-')}.jpg`;
+                    
+                    console.log(`📤 Uploading: Step ${stepNumber} (${Math.round(blob.size / 1024)} KB)`);
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', blob, fileName);
+                        formData.append('fileName', fileName);
+                        formData.append('vehicleId', currentVehicleId);
+                        formData.append('inspectionId', currentInspectionId);
+                        formData.append('stepName', stepName);
+                        formData.append('stepNumber', stepNumber);
+                        formData.append('userId', currentUser.id);
+                        
+                        // Add user data for n8n webhook
+                        formData.append('user_email', currentUser.email);
+                        formData.append('user_name', currentUser.user_metadata?.full_name || currentUser.email);
+                        formData.append('inspection_date', new Date().toISOString().split('T')[0]);
+
+                        const response = await fetch(getEndpoint('uploadPhoto'), {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            
+                            const fileInfo = {
+                                step: stepNumber,
+                                stepName: stepName,
+                                fileName: result.fileName,
+                                url: result.url,
+                                cloudflare_path: result.path,
+                                subFolder: result.subFolder,
+                                category: step.category,
+                                type: "photo",
+                                timestamp: new Date().toISOString(),
+                                fileSize: Math.round(blob.size / 1024) + " KB",
+                                vehicleId: currentVehicleId,
+                                inspectionId: currentInspectionId
+                            };
+                            
+                            uploadedFiles.push(fileInfo);
+
+                            statusBar.textContent = `✅ ${step.category} photo uploaded to CDN!`;
+                            nextButton.disabled = false;
+                            console.log('✅ Upload successful:', result.path);
+                        } else {
+                            throw new Error(`Upload failed: ${response.status}`);
+                        }
+                    } catch (uploadError) {
+                        console.error('❌ Upload failed:', uploadError);
+                        statusBar.textContent = "⚠️ Upload failed - continuing";
+                        nextButton.disabled = false;
+                    }
+                }, 'image/jpeg', 0.8);
+                
+            } catch (error) {
+                console.error('❌ Upload error:', error);
+                statusBar.textContent = "⚠️ Upload error - continuing";
+                nextButton.disabled = false;
+            }
+        }
+
+        // Trigger n8n webhook after inspection completion
+        async function triggerN8nWebhook() {
+            try {
+                const webhookData = {
+                    user_id: currentUser.id,
+                    user_email: currentUser.email,
+                    user_name: currentUser.user_metadata?.full_name || currentUser.email,
+                    inspection_date: new Date().toISOString().split('T')[0],
+                    inspection_id: currentInspectionId,
+                    vehicle_id: currentVehicleId,
+                    vehicle_info: vehicleInfo,
+                    uploaded_files: uploadedFiles,
+                    total_photos: uploadedFiles.length,
+                    timestamp: new Date().toISOString()
+                };
+
+                console.log('📤 Sending to n8n webhook:', webhookData);
+
+                const response = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(webhookData)
+                });
+
+                if (response.ok) {
+                    statusBar.textContent = "✅ Analysis complete! Check your email for the report.";
+                    console.log('✅ n8n webhook triggered successfully');
+                } else {
+                    throw new Error('Webhook failed');
+                }
+
+            } catch (error) {
+                console.error('❌ n8n webhook failed:', error);
+                statusBar.textContent = "⚠️ Analysis system unavailable - photos saved to CDN";
+            }
+        }
+
+        // Capture photo
+        function capturePhoto() {
+            console.log('📸 Capturing photo for step:', currentStep === -1 ? 'license plate' : steps[currentStep].name);
+            
+            flashEffect.classList.add("active");
+            setTimeout(() => flashEffect.classList.remove("active"), 100);
+
+            if (currentStep === -1) {
+                detectLicensePlate();
+            } else {
+                uploadToR2();
+            }
+        }
+
+        // Next step
+        function nextStep() {
+            console.log('➡️ Next step...');
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                updateStep();
+            } else {
+                stepInstruction.textContent = "🎉 Inspection completed! Processing...";
+                nextButton.style.display = "none";
+                photoButton.style.display = "none";
+                statusBar.textContent = "📤 Sending to analysis system...";
+                
+                // Trigger n8n webhook with all data
+                triggerN8nWebhook();
+                
+                console.log('✅ Inspection complete:', uploadedFiles.length, 'files uploaded');
+                console.log('📊 Uploaded files:', uploadedFiles);
+            }
+        }
+
+        // Event listeners
+        function addEventListeners() {
+            try {
+                document.getElementById('start-inspection-btn').addEventListener("click", (e) => {
+                    e.preventDefault();
+                    console.log('🚀 Start inspection clicked');
+                    startInspection();
+                });
+                
+                document.getElementById('photo-button').addEventListener("click", (e) => {
+                    e.preventDefault();
+                    console.log('📸 Photo button clicked');
+                    capturePhoto();
+                });
+                
+                document.getElementById('next-button').addEventListener("click", (e) => {
+                    e.preventDefault();
+                    console.log('➡️ Next button clicked');
+                    nextStep();
+                });
+                
+                console.log('✅ All event listeners attached');
+            } catch (error) {
+                console.error('❌ Error attaching event listeners:', error);
+            }
+        }
+
+        // Initialize everything
+        async function initializeApp() {
+            console.log('🏢 Initializing inspection system...');
+            
+            try {
+                // Add event listeners first
+                addEventListeners();
+                
+                // Initialize camera
+                await startCamera();
+                
+                // Initialize Supabase
+                await initSupabase();
+                
+                // Check authentication
+                await checkAuth();
+                
+                console.log('✅ Inspection system ready!');
+                
+            } catch (error) {
+                console.error('❌ Setup failed:', error);
+                console.log('⚠️ Running in limited mode');
+                
+                // Still try to start camera and add listeners
+                addEventListeners();
+                await startCamera();
+            }
+        }
+
+        // Start the app when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
+
+    </script>
+</body>
+</html> API Configuration
+        const API_ENDPOINTS = {
+            getConfig: 'https://api.rentalshield.net/.netlify/functions/get-config',
+            detectVehicle: 'https://api.rentalshield.net/.netlify/functions/gpt-vehicle-detect',
+            uploadPhoto: 'https://api.rentalshield.net/.netlify/functions/upload-to-r2',
+            vehicleHybrid: 'https://api.rentalshield.net/.netlify/functions/vehicle-hybrid'
+        };
+        
+        const FALLBACK_ENDPOINTS = {
+            getConfig: '/.netlify/functions/get-config',
+            detectVehicle: '/.netlify/functions/gpt-vehicle-detect',
+            uploadPhoto: '/.netlify/functions/upload-to-r2',
+            vehicleHybrid: '/.netlify/functions/vehicle-hybrid'
+        };
+        
+        let useApiSubdomain = true;
+        
+        function getEndpoint(name) {
+            return useApiSubdomain ? API_ENDPOINTS[name] : FALLBACK_ENDPOINTS[name];
+        }
+
+        // n8n Webhook URL
+        const N8N_WEBHOOK_URL = 'https://hamzaw.app.n8n.cloud/webhook-test/50903630-1eac-46a7-a041-6b5614e9f533';
+
+        // Global variables
+        let supabase = null;
+        let currentUser = null;
+        let currentStep = -1;
+        let vehicleInfo = null;
+        let detectedVehicle = null;
+        let inspectionStarted = false;
+        let uploadedFiles = [];
+        let currentVehicleId = null;
+        let currentInspectionId = null;
+        
+        const steps = [
+            { name: "front_bumper", category: "exterior" },
+            { name: "driver_side_front_fender", category: "exterior" },
+            { name: "driver_side_front_wheel", category: "exterior" },
+            { name: "driver_side_doors", category: "exterior" },
+            { name: "driver_side_rear_wheel", category: "exterior" },
+            { name: "driver_side_rear_fender", category: "exterior" },
+            { name: "rear_bumper", category: "exterior" },
+            { name: "passenger_side_rear_fender", category: "exterior" },
+            { name: "passenger_side_rear_wheel", category: "exterior" },
+            { name: "passenger_side_doors", category: "exterior" },
+            { name: "passenger_side_front_wheel", category: "exterior" },
+            { name: "passenger_side_front_fender", category: "exterior" },
+            { name: "front_windshield", category: "exterior" },
+            { name: "interior_dashboard", category: "interior" },
+            { name: "interior_front_seats", category: "interior" },
+            { name: "interior_rear_seats", category: "interior" },
+            { name: "odometer", category: "documents" },
+            { name: "trunk_cargo_area", category: "cargo" }
+        ];
+
+        // Get elements
+        const video = document.getElementById("video");
+        const statusBar = document.getElementById("status-bar");
+        const stepInstruction = document.getElementById("step-instruction");
+        const nextButton = document.getElementById("next-button");
+        const photoButton = document.getElementById("photo-button");
+        const startScreen = document.getElementById("start-screen");
+        const flashEffect = document.getElementById("flash-effect");
+
+        // Initialize Supabase
+        async function initSupabase() {
+            try {
+                console.log('🔗 Trying API subdomain...');
+                const configResponse = await fetch(getEndpoint('getConfig'));
+                
+                if (!configResponse.ok) {
+                    throw new Error('API subdomain failed');
+                }
+                
+                const config = await configResponse.json();
+                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+                console.log('✅ Supabase initialized via API subdomain');
+            } catch (error) {
+                console.log('⚠️ API subdomain failed, trying fallback...');
+                useApiSubdomain = false;
+                
+                try {
+                    const configResponse = await fetch(getEndpoint('getConfig'));
+                    const config = await configResponse.json();
+                    supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+                    console.log('✅ Supabase initialized via fallback');
+                } catch (fallbackError) {
+                    console.error('❌ Both API endpoints failed:', fallbackError);
+                    // Use hardcoded credentials as final fallback
+                    const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
+                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
+                    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                    console.log('✅ Supabase initialized with fallback credentials');
+                }
+            }
+        }
+
+        // Check authentication
+        async function checkAuth() {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
+                // Not logged in, redirect to auth
+                window.location.href = '/auth.html';
+                return;
+            }
+            
+            currentUser = session.user;
+            document.getElementById('user-email').textContent = currentUser.email;
+            console.log('✅ User authenticated:', currentUser.email);
+        }
+
+        // Start camera
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" },
+                    audio: false,
+                });
+                video.srcObject = stream;
+                console.log("✅ Camera started");
+            } catch (e) {
+                console.log("❌ Camera failed, using front camera");
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: "user" },
+                        audio: false,
+                    });
+                    video.srcObject = stream;
+                } catch (e2) {
+                    console.log("❌ All cameras failed");
+                    video.style.display = 'none';
+                }
+            }
+        }
+
+        //
