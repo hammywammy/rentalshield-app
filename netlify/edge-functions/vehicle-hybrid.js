@@ -65,6 +65,11 @@ async function findVehicle(supabaseUrl, headers, userId, vehicleData) {
   try {
     const { license_plate } = vehicleData;
     
+    const corsHeaders = {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+    };
+    
     // Search for vehicle by license plate and user ID
     const vehicleResponse = await fetch(
       `${supabaseUrl}/rest/v1/vehicles?user_id=eq.${userId}&license_plate=eq.${license_plate}&select=*`, 
@@ -77,22 +82,59 @@ async function findVehicle(supabaseUrl, headers, userId, vehicleData) {
     
     const vehicles = await vehicleResponse.json();
     
+    // If vehicle not found, create it
     if (vehicles.length === 0) {
-      return new Response(JSON.stringify({
-        found: false,
-        message: 'No vehicle found with that license plate'
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      });
+        // Create new vehicle record
+        const newVehicle = {
+            id: crypto.randomUUID(),
+            user_id: userId,
+            license_plate: license_plate,
+            make: vehicleData.make || 'Unknown',
+            model: vehicleData.model || 'Unknown', 
+            year: vehicleData.year || null,
+            color: vehicleData.color || 'Unknown',
+            created_at: new Date().toISOString()
+        };
+        
+        const createResponse = await fetch(`${supabaseUrl}/rest/v1/vehicles`, {
+            method: 'POST',
+            headers: {
+                ...headers,
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(newVehicle)
+        });
+        
+        if (!createResponse.ok) {
+            console.error('Vehicle creation failed:', await createResponse.text());
+            return new Response(JSON.stringify({
+                found: false,
+                message: 'Vehicle creation failed'
+            }), { 
+                status: 500, 
+                headers: corsHeaders 
+            });
+        }
+        
+        const createdVehicle = await createResponse.json();
+        
+        return new Response(JSON.stringify({
+            found: true,
+            vehicle: {
+                ...createdVehicle[0],
+                inspectionHistory: [],
+                totalInspections: 0,
+                lastInspection: null
+            }
+        }), { 
+            status: 200, 
+            headers: corsHeaders 
+        });
     }
     
+    // Vehicle found - get inspection history
     const vehicle = vehicles[0];
     
-    // Get inspection history for this vehicle
     const inspectionResponse = await fetch(
       `${supabaseUrl}/rest/v1/inspections?vehicle_id=eq.${vehicle.id}&select=*&order=created_at.desc&limit=5`,
       { method: 'GET', headers }
@@ -113,10 +155,7 @@ async function findVehicle(supabaseUrl, headers, userId, vehicleData) {
       }
     }), {
       status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: corsHeaders,
     });
     
   } catch (error) {
