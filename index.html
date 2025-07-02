@@ -397,6 +397,10 @@
     </footer>
 
     <script>
+        console.log('🏠 LANDING PAGE: Script loaded');
+window.addEventListener('beforeunload', function() {
+    console.log('🏠 LANDING PAGE: Page unloading...');
+});
         // Initialize Supabase
         const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
@@ -407,14 +411,30 @@
         // Check authentication status
        // Check authentication status
 async function checkAuth() {
+    console.log('🏠 LANDING PAGE: Starting auth check...');
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session) {
         currentUser = session.user;
+        console.log('🏠 LANDING PAGE: User is logged in:', currentUser.email);
         showLoggedInState();
-        // REMOVED: No auto-redirect here
     } else {
+        console.log('🏠 LANDING PAGE: No user logged in');
         showLoggedOutState();
+    }
+    console.log('🏠 LANDING PAGE: Auth check complete');
+}
+
+function handleCTA() {
+    console.log('🏠 LANDING PAGE: CTA button clicked!');
+    console.log('🏠 LANDING PAGE: Current user:', currentUser);
+    
+    if (currentUser) {
+        console.log('🏠 LANDING PAGE: Redirecting to inspection...');
+        window.location.href = '/inspection.html';
+    } else {
+        console.log('🏠 LANDING PAGE: Redirecting to auth...');
+        window.location.href = '/auth.html';
     }
 }
 
@@ -445,16 +465,7 @@ async function checkAuth() {
             showLoggedOutState();
         }
 
-        // Handle CTA buttons
-        function handleCTA() {
-            if (currentUser) {
-                // User is logged in, go to inspection
-                window.location.href = '/inspection.html';
-            } else {
-                // User not logged in, go to auth
-                window.location.href = '/auth.html';
-            }
-        }
+       
 
         // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
