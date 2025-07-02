@@ -274,7 +274,7 @@
             <p>Ready to start professional inspection</p>
         </div>
         <button id="start-inspection-btn" class="btn">Start Inspection</button>
-        <a href="/" class="btn btn-secondary">← Back to Home</a>
+        <a href="/dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
     </div>
 
     <!-- Status and Controls -->
@@ -286,12 +286,154 @@
     <script>
         console.log('🏢 Vehicle Inspection System Starting...');
         
+        // API Configuration
+        const API_ENDPOINTS = {
+            getConfig: 'https://api.rentalshield.net/.netlify/functions/get-config',
+            detectVehicle: 'https://api.rentalshield.net/.netlify/functions/gpt-vehicle-detect',
+            uploadPhoto: 'https://api.rentalshield.net/.netlify/functions/upload-to-r2',
+            vehicleHybrid: 'https://api.rentalshield.net/.netlify/functions/vehicle-hybrid'
+        };
+        
+        const FALLBACK_ENDPOINTS = {
+            getConfig: '/.netlify/functions/get-config',
+            detectVehicle: '/.netlify/functions/gpt-vehicle-detect',
+            uploadPhoto: '/.netlify/functions/upload-to-r2',
+            vehicleHybrid: '/.netlify/functions/vehicle-hybrid'
+        };
+        
+        let useApiSubdomain = true;
+        
+        function getEndpoint(name) {
+            return useApiSubdomain ? API_ENDPOINTS[name] : FALLBACK_ENDPOINTS[name];
+        }
+
+        // n8n Webhook URL
+        const N8N_WEBHOOK_URL = 'https://hamzaw.app.n8n.cloud/webhook-test/50903630-1eac-46a7-a041-6b5614e9f533';
+
+        // Global variables
+        let supabase = null;
+        let currentUser = null;
+        let currentStep = -1;
+        let vehicleInfo = null;
+        let detectedVehicle = null;
+        let inspectionStarted = false;
+        let uploadedFiles = [];
+        let currentVehicleId = null;
+        let currentInspectionId = null;
+        
+        const steps = [
+            { name: "front_bumper", category: "exterior" },
+            { name: "driver_side_front_fender", category: "exterior" },
+            { name: "driver_side_front_wheel", category: "exterior" },
+            { name: "driver_side_doors", category: "exterior" },
+            { name: "driver_side_rear_wheel", category: "exterior" },
+            { name: "driver_side_rear_fender", category: "exterior" },
+            { name: "rear_bumper", category: "exterior" },
+            { name: "passenger_side_rear_fender", category: "exterior" },
+            { name: "passenger_side_rear_wheel", category: "exterior" },
+            { name: "passenger_side_doors", category: "exterior" },
+            { name: "passenger_side_front_wheel", category: "exterior" },
+            { name: "passenger_side_front_fender", category: "exterior" },
+            { name: "front_windshield", category: "exterior" },
+            { name: "interior_dashboard", category: "interior" },
+            { name: "interior_front_seats", category: "interior" },
+            { name: "interior_rear_seats", category: "interior" },
+            { name: "odometer", category: "documents" },
+            { name: "trunk_cargo_area", category: "cargo" }
+        ];
+
+        // Get elements
+        const video = document.getElementById("video");
+        const statusBar = document.getElementById("status-bar");
+        const stepInstruction = document.getElementById("step-instruction");
+        const nextButton = document.getElementById("next-button");
+        const photoButton = document.getElementById("photo-button");
+        const startScreen = document.getElementById("start-screen");
+        const flashEffect = document.getElementById("flash-effect");
+
         // Generate UUID
         function generateUUID() {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
             });
+        }
+
+        // Start camera
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" },
+                    audio: false,
+                });
+                video.srcObject = stream;
+                console.log("✅ Camera started");
+            } catch (e) {
+                console.log("❌ Camera failed, using front camera");
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: "user" },
+                        audio: false,
+                    });
+                    video.srcObject = stream;
+                } catch (e2) {
+                    console.log("❌ All cameras failed");
+                    video.style.display = 'none';
+                }
+            }
+        }
+
+        // Initialize Supabase
+        async function initSupabase() {
+            try {
+                console.log('🔗 Trying API subdomain...');
+                const configResponse = await fetch(getEndpoint('getConfig'));
+                
+                if (!configResponse.ok) {
+                    throw new Error('API subdomain failed');
+                }
+                
+                const config = await configResponse.json();
+                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+                console.log('✅ Supabase initialized via API subdomain');
+            } catch (error) {
+                console.log('⚠️ API subdomain failed, trying fallback...');
+                useApiSubdomain = false;
+                
+                try {
+                    const configResponse = await fetch(getEndpoint('getConfig'));
+                    const config = await configResponse.json();
+                    supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+                    console.log('✅ Supabase initialized via fallback');
+                } catch (fallbackError) {
+                    console.error('❌ Both API endpoints failed:', fallbackError);
+                    // Use hardcoded credentials as final fallback
+                    const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
+                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
+                    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                    console.log('✅ Supabase initialized with fallback credentials');
+                }
+            }
+        }
+
+        // Check authentication
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in, redirect to auth
+                    window.location.href = '/auth.html';
+                    return;
+                }
+                
+                currentUser = session.user;
+                document.getElementById('user-email').textContent = currentUser.email;
+                console.log('✅ User authenticated:', currentUser.email);
+            } catch (error) {
+                console.error('❌ Auth check failed:', error);
+                window.location.href = '/auth.html';
+            }
         }
 
         // Check vehicle with hybrid system
@@ -502,15 +644,15 @@
                 <h3>Enter Vehicle Details</h3>
                 <div class="manual-form">
                     <div class="form-row">
-                        <div><label>License Plate</label><input type="text" id="manual-plate" placeholder="1393"></div>
+                        <div><label>License Plate</label><input type="text" id="manual-plate" placeholder="ABC123"></div>
                     </div>
                     <div class="form-row">
-                        <div><label>Make</label><input type="text" id="manual-make" placeholder="Cadillac"></div>
-                        <div><label>Model</label><input type="text" id="manual-model" placeholder="SRX"></div>
+                        <div><label>Make</label><input type="text" id="manual-make" placeholder="Toyota"></div>
+                        <div><label>Model</label><input type="text" id="manual-model" placeholder="Camry"></div>
                     </div>
                     <div class="form-row">
-                        <div><label>Year</label><input type="number" id="manual-year" placeholder="2016"></div>
-                        <div><label>Color</label><input type="text" id="manual-color" placeholder="Dark Blue Gray"></div>
+                        <div><label>Year</label><input type="number" id="manual-year" placeholder="2022"></div>
+                        <div><label>Color</label><input type="text" id="manual-color" placeholder="Silver"></div>
                     </div>
                 </div>
                 <div class="popup-buttons">
@@ -683,6 +825,8 @@
                     inspection_id: currentInspectionId,
                     vehicle_id: currentVehicleId,
                     vehicle_info: vehicleInfo,
+                    photo_urls: uploadedFiles.map(file => file.url),
+                    photo_count: uploadedFiles.length,
                     uploaded_files: uploadedFiles,
                     total_photos: uploadedFiles.length,
                     timestamp: new Date().toISOString()
@@ -701,6 +845,14 @@
                 if (response.ok) {
                     statusBar.textContent = "✅ Analysis complete! Check your email for the report.";
                     console.log('✅ n8n webhook triggered successfully');
+                    
+                    // Show completion message
+                    setTimeout(() => {
+                        statusBar.textContent = "🎉 Inspection completed! Redirecting...";
+                        setTimeout(() => {
+                            window.location.href = '/dashboard.html';
+                        }, 3000);
+                    }, 2000);
                 } else {
                     throw new Error('Webhook failed');
                 }
@@ -708,6 +860,11 @@
             } catch (error) {
                 console.error('❌ n8n webhook failed:', error);
                 statusBar.textContent = "⚠️ Analysis system unavailable - photos saved to CDN";
+                
+                // Still redirect after delay
+                setTimeout(() => {
+                    window.location.href = '/dashboard.html';
+                }, 5000);
             }
         }
 
@@ -795,9 +952,13 @@
                 console.error('❌ Setup failed:', error);
                 console.log('⚠️ Running in limited mode');
                 
-                // Still try to start camera and add listeners
-                addEventListeners();
-                await startCamera();
+                // Still try to start camera and add listeners if possible
+                try {
+                    addEventListeners();
+                    await startCamera();
+                } catch (limitedError) {
+                    console.error('❌ Limited mode failed:', limitedError);
+                }
             }
         }
 
@@ -810,141 +971,4 @@
 
     </script>
 </body>
-</html> API Configuration
-        const API_ENDPOINTS = {
-            getConfig: 'https://api.rentalshield.net/.netlify/functions/get-config',
-            detectVehicle: 'https://api.rentalshield.net/.netlify/functions/gpt-vehicle-detect',
-            uploadPhoto: 'https://api.rentalshield.net/.netlify/functions/upload-to-r2',
-            vehicleHybrid: 'https://api.rentalshield.net/.netlify/functions/vehicle-hybrid'
-        };
-        
-        const FALLBACK_ENDPOINTS = {
-            getConfig: '/.netlify/functions/get-config',
-            detectVehicle: '/.netlify/functions/gpt-vehicle-detect',
-            uploadPhoto: '/.netlify/functions/upload-to-r2',
-            vehicleHybrid: '/.netlify/functions/vehicle-hybrid'
-        };
-        
-        let useApiSubdomain = true;
-        
-        function getEndpoint(name) {
-            return useApiSubdomain ? API_ENDPOINTS[name] : FALLBACK_ENDPOINTS[name];
-        }
-
-        // n8n Webhook URL
-        const N8N_WEBHOOK_URL = 'https://hamzaw.app.n8n.cloud/webhook-test/50903630-1eac-46a7-a041-6b5614e9f533';
-
-        // Global variables
-        let supabase = null;
-        let currentUser = null;
-        let currentStep = -1;
-        let vehicleInfo = null;
-        let detectedVehicle = null;
-        let inspectionStarted = false;
-        let uploadedFiles = [];
-        let currentVehicleId = null;
-        let currentInspectionId = null;
-        
-        const steps = [
-            { name: "front_bumper", category: "exterior" },
-            { name: "driver_side_front_fender", category: "exterior" },
-            { name: "driver_side_front_wheel", category: "exterior" },
-            { name: "driver_side_doors", category: "exterior" },
-            { name: "driver_side_rear_wheel", category: "exterior" },
-            { name: "driver_side_rear_fender", category: "exterior" },
-            { name: "rear_bumper", category: "exterior" },
-            { name: "passenger_side_rear_fender", category: "exterior" },
-            { name: "passenger_side_rear_wheel", category: "exterior" },
-            { name: "passenger_side_doors", category: "exterior" },
-            { name: "passenger_side_front_wheel", category: "exterior" },
-            { name: "passenger_side_front_fender", category: "exterior" },
-            { name: "front_windshield", category: "exterior" },
-            { name: "interior_dashboard", category: "interior" },
-            { name: "interior_front_seats", category: "interior" },
-            { name: "interior_rear_seats", category: "interior" },
-            { name: "odometer", category: "documents" },
-            { name: "trunk_cargo_area", category: "cargo" }
-        ];
-
-        // Get elements
-        const video = document.getElementById("video");
-        const statusBar = document.getElementById("status-bar");
-        const stepInstruction = document.getElementById("step-instruction");
-        const nextButton = document.getElementById("next-button");
-        const photoButton = document.getElementById("photo-button");
-        const startScreen = document.getElementById("start-screen");
-        const flashEffect = document.getElementById("flash-effect");
-
-        // Initialize Supabase
-        async function initSupabase() {
-            try {
-                console.log('🔗 Trying API subdomain...');
-                const configResponse = await fetch(getEndpoint('getConfig'));
-                
-                if (!configResponse.ok) {
-                    throw new Error('API subdomain failed');
-                }
-                
-                const config = await configResponse.json();
-                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
-                console.log('✅ Supabase initialized via API subdomain');
-            } catch (error) {
-                console.log('⚠️ API subdomain failed, trying fallback...');
-                useApiSubdomain = false;
-                
-                try {
-                    const configResponse = await fetch(getEndpoint('getConfig'));
-                    const config = await configResponse.json();
-                    supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
-                    console.log('✅ Supabase initialized via fallback');
-                } catch (fallbackError) {
-                    console.error('❌ Both API endpoints failed:', fallbackError);
-                    // Use hardcoded credentials as final fallback
-                    const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
-                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
-                    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                    console.log('✅ Supabase initialized with fallback credentials');
-                }
-            }
-        }
-
-        // Check authentication
-        async function checkAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (!session) {
-                // Not logged in, redirect to auth
-                window.location.href = '/auth.html';
-                return;
-            }
-            
-            currentUser = session.user;
-            document.getElementById('user-email').textContent = currentUser.email;
-            console.log('✅ User authenticated:', currentUser.email);
-        }
-
-        // Start camera
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" },
-                    audio: false,
-                });
-                video.srcObject = stream;
-                console.log("✅ Camera started");
-            } catch (e) {
-                console.log("❌ Camera failed, using front camera");
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: "user" },
-                        audio: false,
-                    });
-                    video.srcObject = stream;
-                } catch (e2) {
-                    console.log("❌ All cameras failed");
-                    video.style.display = 'none';
-                }
-            }
-        }
-
-        //
+</html>
