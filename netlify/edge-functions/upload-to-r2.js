@@ -1,5 +1,4 @@
 export default async (request, context) => {
-  // Handle CORS preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
@@ -11,28 +10,18 @@ export default async (request, context) => {
     });
   }
 
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
   try {
     const formData = await request.formData();
     const file = formData.get('file');
     const fileName = formData.get('fileName');
-    const vehicleId = formData.get('vehicleId');
-    const inspectionId = formData.get('inspectionId');
-    const stepName = formData.get('stepName');
-    const stepNumber = formData.get('stepNumber');
     const userId = formData.get('userId');
+    const inspectionId = formData.get('inspectionId');
 
     if (!file || !fileName) {
       throw new Error('No file or filename provided');
     }
 
-    // Get Cloudflare R2 credentials
+    // Get credentials
     const accountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
     const accessKeyId = Deno.env.get('CLOUDFLARE_R2_ACCESS_KEY_ID');
     const secretAccessKey = Deno.env.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY');
@@ -42,7 +31,7 @@ export default async (request, context) => {
       throw new Error('Cloudflare R2 credentials not configured');
     }
 
-    // Create organized folder structure
+    // Create path
     const today = new Date().toISOString().split('T')[0];
     const subFolder = `${today}/${userId}/${inspectionId}`;
     const fullPath = `${subFolder}/${fileName}`;
@@ -50,65 +39,32 @@ export default async (request, context) => {
     // Convert file to ArrayBuffer
     const fileBuffer = await file.arrayBuffer();
 
-    // Create AWS v4 signature for R2
-    const region = 'auto';
-    const service = 's3';
-    const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
+    // Use Cloudflare API instead of S3 API
+    const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${fullPath}`;
     
-    // Simple upload using signed URL approach
-// Simplified upload using direct REST API
-// Simple direct upload without authentication for now
-const uploadUrl = `https://${accountId}.r2.cloudflarestorage.com/${bucketName}/${fullPath}`;
-
-// Use fetch with minimal headers
-const uploadResponse = await fetch(uploadUrl, {
-    method: 'PUT',
-    body: fileBuffer,
-    headers: {
-        'Content-Type': 'application/octet-stream',
+    // Get API token from environment
+    const apiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
+    
+    if (!apiToken) {
+      throw new Error('CLOUDFLARE_API_TOKEN not configured');
     }
-});
 
-if (!uploadResponse.ok) {
-    // Log more details about the error
-    const errorText = await uploadResponse.text();
-    console.error('R2 upload error:', uploadResponse.status, errorText);
-    throw new Error(`R2 upload failed: ${uploadResponse.status} - ${errorText}`);
-}
+    const uploadResponse = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': file.type || 'image/jpeg',
+      },
+      body: fileBuffer
+    });
 
-    // Construct the public URL
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      throw new Error(`R2 upload failed: ${uploadResponse.status} - ${errorText}`);
+    }
+
+    // Construct public URL
     const publicUrl = `https://cdn.rentalshield.net/${fullPath}`;
-
-    // Save metadata to Supabase
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_KEY');
-
-    if (supabaseUrl && supabaseKey) {
-      try {
-        await fetch(`${supabaseUrl}/rest/v1/photos`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey
-          },
-          body: JSON.stringify({
-            inspection_id: inspectionId,
-            vehicle_id: vehicleId,
-            user_id: userId,
-            step_name: stepName,
-            step_number: parseInt(stepNumber),
-            file_name: fileName,
-            file_url: publicUrl,
-            file_path: fullPath,
-            file_size: fileBuffer.byteLength,
-            uploaded_at: new Date().toISOString()
-          })
-        });
-      } catch (dbError) {
-        console.warn('Failed to save photo metadata to database:', dbError);
-      }
-    }
 
     return new Response(JSON.stringify({
       success: true,
