@@ -1,5 +1,11 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
+  const headers = {
+    'Access-Control-Allow-Origin': 'https://rentalshield.net',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
+  };
+
 const r2Client = new S3Client({
   region: 'auto',
   endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
