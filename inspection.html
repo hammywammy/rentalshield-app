@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicle Inspection - RentalShield</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Inspection - RentalShield</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
         * {
             margin: 0;
             padding: 0;
@@ -260,30 +260,27 @@
                 flex-direction: column;
             }
         }
-    </style>
+  </style>
 </head>
 <body>
-    <video id="video" autoplay muted playsinline></video>
-    <div id="flash-effect" class="flash-effect"></div>
+  <video id="video" autoplay="" muted playsinline></video>
+  <div id="flash-effect" class="flash-effect"></div>
+  <div id="start-screen">
+    <h1>🛡️ Vehicle Inspection</h1>
+    <div class="user-info-display">
+      <p>Logged in as: <span id="user-email">Loading...</span></p>
+      <p>Ready to start professional inspection</p>
+    </div><button id="start-inspection-btn" class="btn">Start Inspection</button> <a href="/dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+  </div>
+  <div id="status-bar">
+    Ready
+  </div>
+  <div id="step-instruction">
+    Loading...
+  </div><button id="photo-button">Take Photo</button> <button id="next-button" disabled>Next Step</button> 
+  <script>
 
-    <!-- Start Screen -->
-    <div id="start-screen">
-        <h1>🛡️ Vehicle Inspection</h1>
-        <div class="user-info-display">
-            <p>Logged in as: <span id="user-email">Loading...</span></p>
-            <p>Ready to start professional inspection</p>
-        </div>
-        <button id="start-inspection-btn" class="btn">Start Inspection</button>
-        <a href="/dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
-    </div>
 
-    <!-- Status and Controls -->
-    <div id="status-bar">Ready</div>
-    <div id="step-instruction">Loading...</div>
-    <button id="photo-button">Take Photo</button>
-    <button id="next-button" disabled>Next Step</button>
-
-    <script>
         console.log('🏢 Vehicle Inspection System Starting...');
         
         // API Configuration - Edge Functions
@@ -965,6 +962,6 @@
             initializeApp();
         }
 
-    </script>
+  </script>
 </body>
 </html>
