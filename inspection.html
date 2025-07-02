@@ -263,24 +263,23 @@
   </style>
 </head>
 <body>
-  <video id="video" autoplay="" muted playsinline></video>
+  <video id="video" autoplay muted playsinline></video>
   <div id="flash-effect" class="flash-effect"></div>
   <div id="start-screen">
     <h1>🛡️ Vehicle Inspection</h1>
     <div class="user-info-display">
       <p>Logged in as: <span id="user-email">Loading...</span></p>
       <p>Ready to start professional inspection</p>
-    </div><button id="start-inspection-btn" class="btn">Start Inspection</button> <a href="/dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+    <button id="start-inspection-btn" class="btn">Start Inspection</button> 
+    <a href="/dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
   </div>
-  <div id="status-bar">
-    Ready
-  </div>
-  <div id="step-instruction">
-    Loading...
-  </div><button id="photo-button">Take Photo</button> <button id="next-button" disabled>Next Step</button> 
+  <div id="status-bar">Ready</div>
+  <div id="step-instruction">Loading...</div>
+  <button id="photo-button">Take Photo</button> 
+  <button id="next-button" disabled>Next Step</button> 
+  
   <script>
-
-
         console.log('🏢 Vehicle Inspection System Starting...');
         
         // API Configuration - Edge Functions
@@ -400,7 +399,6 @@
                 const { data: { session } } = await supabase.auth.getSession();
                 
                 if (!session) {
-                    // Not logged in, redirect to auth
                     window.location.href = '/auth.html';
                     return;
                 }
@@ -476,6 +474,81 @@
                 console.error('❌ Error creating inspection:', error);
                 currentInspectionId = generateUUID();
             }
+        }
+
+        // Show vehicle confirmation popups
+        function showVehicleHistoryConfirmation(vehicleData) {
+            const popup = document.createElement('div');
+            popup.className = 'vehicle-popup';
+            popup.id = 'vehicle-confirmation';
+            
+            let lastInspectionText = '';
+            if (vehicleData.lastInspection) {
+                const lastDate = new Date(vehicleData.lastInspection.inspection_date || vehicleData.lastInspection.timestamp).toLocaleDateString();
+                lastInspectionText = `<p>Last inspection: ${lastDate}</p>`;
+            }
+            
+            popup.innerHTML = `
+                <h3>Found Existing Vehicle</h3>
+                <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
+                <p>${vehicleData.color} • ${vehicleData.license_plate}</p>
+                ${lastInspectionText}
+                <p>${vehicleData.totalInspections} previous inspections</p>
+                <div class="popup-buttons">
+                    <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">Yes, correct</button>
+                    <button class="popup-btn btn-no" onclick="confirmVehicle(false)">No, different</button>
+                </div>
+            `;
+            
+            detectedVehicle = vehicleData;
+            document.body.appendChild(popup);
+        }
+
+        function showNewVehicleConfirmation(vehicleData) {
+            const popup = document.createElement('div');
+            popup.className = 'vehicle-popup';
+            popup.id = 'vehicle-confirmation';
+            
+            popup.innerHTML = `
+                <h3>New Vehicle Detected</h3>
+                <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
+                <p>${vehicleData.color} • ${vehicleData.license_plate}</p>
+                <p>First inspection for this vehicle</p>
+                <div class="popup-buttons">
+                    <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">Add vehicle</button>
+                    <button class="popup-btn btn-no" onclick="confirmVehicle(false)">Correct info</button>
+                </div>
+            `;
+            
+            detectedVehicle = vehicleData;
+            document.body.appendChild(popup);
+        }
+
+        function showSimpleVehicleEntry() {
+            const popup = document.createElement('div');
+            popup.className = 'vehicle-popup';
+            popup.id = 'vehicle-entry';
+            popup.innerHTML = `
+                <h3>Enter Vehicle Details</h3>
+                <div class="manual-form">
+                    <div class="form-row">
+                        <div><label>License Plate</label><input type="text" id="manual-plate" placeholder="ABC123"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Make</label><input type="text" id="manual-make" placeholder="Toyota"></div>
+                        <div><label>Model</label><input type="text" id="manual-model" placeholder="Camry"></div>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Year</label><input type="number" id="manual-year" placeholder="2022"></div>
+                        <div><label>Color</label><input type="text" id="manual-color" placeholder="Silver"></div>
+                    </div>
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn btn-yes" onclick="saveVehicleDetails()">Save</button>
+                </div>
+            `;
+            
+            document.body.appendChild(popup);
         }
 
         // Start inspection
@@ -564,96 +637,6 @@
                 statusBar.textContent = "Detection failed - manual entry";
                 showSimpleVehicleEntry();
             }
-        }ections = 0;
-                        
-                        showNewVehicleConfirmation(result.vehicle);
-                    }
-                } else {
-                    console.log('❌ Detection failed, showing manual entry');
-                    statusBar.textContent = "Detection failed - manual entry";
-                    showSimpleVehicleEntry();
-                }
-                
-            } catch (error) {
-                console.error('❌ Detection error:', error);
-                statusBar.textContent = "Detection failed - manual entry";
-                showSimpleVehicleEntry();
-            }
-        }
-
-        // Show vehicle confirmation popups
-        function showVehicleHistoryConfirmation(vehicleData) {
-            const popup = document.createElement('div');
-            popup.className = 'vehicle-popup';
-            popup.id = 'vehicle-confirmation';
-            
-            let lastInspectionText = '';
-            if (vehicleData.lastInspection) {
-                const lastDate = new Date(vehicleData.lastInspection.inspection_date || vehicleData.lastInspection.timestamp).toLocaleDateString();
-                lastInspectionText = `<p>Last inspection: ${lastDate}</p>`;
-            }
-            
-            popup.innerHTML = `
-                <h3>Found Existing Vehicle</h3>
-                <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
-                <p>${vehicleData.color} • ${vehicleData.license_plate}</p>
-                ${lastInspectionText}
-                <p>${vehicleData.totalInspections} previous inspections</p>
-                <div class="popup-buttons">
-                    <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">Yes, correct</button>
-                    <button class="popup-btn btn-no" onclick="confirmVehicle(false)">No, different</button>
-                </div>
-            `;
-            
-            detectedVehicle = vehicleData;
-            document.body.appendChild(popup);
-        }
-
-        function showNewVehicleConfirmation(vehicleData) {
-            const popup = document.createElement('div');
-            popup.className = 'vehicle-popup';
-            popup.id = 'vehicle-confirmation';
-            
-            popup.innerHTML = `
-                <h3>New Vehicle Detected</h3>
-                <p><strong>${vehicleData.make} ${vehicleData.model} ${vehicleData.year}</strong></p>
-                <p>${vehicleData.color} • ${vehicleData.license_plate}</p>
-                <p>First inspection for this vehicle</p>
-                <div class="popup-buttons">
-                    <button class="popup-btn btn-yes" onclick="confirmVehicle(true)">Add vehicle</button>
-                    <button class="popup-btn btn-no" onclick="confirmVehicle(false)">Correct info</button>
-                </div>
-            `;
-            
-            detectedVehicle = vehicleData;
-            document.body.appendChild(popup);
-        }
-
-        function showSimpleVehicleEntry() {
-            const popup = document.createElement('div');
-            popup.className = 'vehicle-popup';
-            popup.id = 'vehicle-entry';
-            popup.innerHTML = `
-                <h3>Enter Vehicle Details</h3>
-                <div class="manual-form">
-                    <div class="form-row">
-                        <div><label>License Plate</label><input type="text" id="manual-plate" placeholder="ABC123"></div>
-                    </div>
-                    <div class="form-row">
-                        <div><label>Make</label><input type="text" id="manual-make" placeholder="Toyota"></div>
-                        <div><label>Model</label><input type="text" id="manual-model" placeholder="Camry"></div>
-                    </div>
-                    <div class="form-row">
-                        <div><label>Year</label><input type="number" id="manual-year" placeholder="2022"></div>
-                        <div><label>Color</label><input type="text" id="manual-color" placeholder="Silver"></div>
-                    </div>
-                </div>
-                <div class="popup-buttons">
-                    <button class="popup-btn btn-yes" onclick="saveVehicleDetails()">Save</button>
-                </div>
-            `;
-            
-            document.body.appendChild(popup);
         }
 
         // Global popup functions
@@ -832,7 +815,6 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(webhookData)
                 });
 
                 if (response.ok) {
