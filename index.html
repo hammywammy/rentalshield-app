@@ -405,16 +405,18 @@
         let currentUser = null;
 
         // Check authentication status
-        async function checkAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session) {
-                currentUser = session.user;
-                showLoggedInState();
-            } else {
-                showLoggedOutState();
-            }
-        }
+       // Check authentication status
+async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+        currentUser = session.user;
+        showLoggedInState();
+        // REMOVED: No auto-redirect here
+    } else {
+        showLoggedOutState();
+    }
+}
 
         // Show logged in state
         function showLoggedInState() {
