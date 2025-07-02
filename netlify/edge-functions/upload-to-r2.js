@@ -57,20 +57,24 @@ export default async (request, context) => {
     
     // Simple upload using signed URL approach
 // Simplified upload using direct REST API
-const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${fullPath}`;
+// Simple direct upload without authentication for now
+const uploadUrl = `https://${accountId}.r2.cloudflarestorage.com/${bucketName}/${fullPath}`;
 
+// Use fetch with minimal headers
 const uploadResponse = await fetch(uploadUrl, {
     method: 'PUT',
+    body: fileBuffer,
     headers: {
-        'Authorization': `Bearer ${Deno.env.get('CLOUDFLARE_API_TOKEN')}`,
-        'Content-Type': file.type || 'image/jpeg',
-    },
-    body: fileBuffer
+        'Content-Type': 'application/octet-stream',
+    }
 });
 
-    if (!uploadResponse.ok) {
-      throw new Error(`R2 upload failed: ${uploadResponse.status}`);
-    }
+if (!uploadResponse.ok) {
+    // Log more details about the error
+    const errorText = await uploadResponse.text();
+    console.error('R2 upload error:', uploadResponse.status, errorText);
+    throw new Error(`R2 upload failed: ${uploadResponse.status} - ${errorText}`);
+}
 
     // Construct the public URL
     const publicUrl = `https://cdn.rentalshield.net/${fullPath}`;
