@@ -103,16 +103,10 @@
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Check if user is already logged in
-        async function checkAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                window.location.href = '/dashboard.html';
-            }
-        }
-
-        // Handle form submission
-        document.getElementById('auth-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        console.log('🏠 LANDING PAGE: Script loaded');
+window.addEventListener('beforeunload', function() {
+    console.log('🏠 LANDING PAGE: Page unloading...');
+});
             
             const email = document.getElementById('email').value;
             const submitBtn = document.getElementById('submit-btn');
