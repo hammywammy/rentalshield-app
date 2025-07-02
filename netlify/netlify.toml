@@ -21,7 +21,7 @@
 
 [[edge_functions]]
   function = "create-manifest"
-  path = "/api/create-manifest"
+  path = "/api/create-manifest" 
 
 [[edge_functions]]
   function = "sync-to-supabase"
