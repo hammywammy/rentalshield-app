@@ -103,20 +103,36 @@
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Check if user is already logged in
-        console.log('🏠 LANDING PAGE: Script loaded');
-window.addEventListener('beforeunload', function() {
-    console.log('🏠 LANDING PAGE: Page unloading...');
-});
+        async function checkAuth() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    console.log('User already logged in, redirecting to dashboard');
+                    window.location.href = '/dashboard.html';
+                }
+            } catch (error) {
+                console.log('Auth check error:', error.message);
+            }
+        }
+
+        // Form submission handler
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Prevent form from refreshing the page
             
             const email = document.getElementById('email').value;
             const submitBtn = document.getElementById('submit-btn');
             const messageDiv = document.getElementById('message');
+            
+            // Hide any previous messages
+            messageDiv.style.display = 'none';
             
             // Disable button and show loading
             submitBtn.disabled = true;
             submitBtn.textContent = 'Sending...';
             
             try {
+                console.log('Sending magic link to:', email);
+                
                 const { error } = await supabase.auth.signInWithOtp({
                     email: email,
                     options: {
@@ -129,12 +145,17 @@ window.addEventListener('beforeunload', function() {
                 }
                 
                 // Success
+                console.log('Magic link sent successfully');
                 messageDiv.className = 'message success';
                 messageDiv.style.display = 'block';
                 messageDiv.textContent = 'Check your email for the login link!';
                 
+                // Clear the email input
+                document.getElementById('email').value = '';
+                
             } catch (error) {
                 // Error
+                console.error('Magic link error:', error);
                 messageDiv.className = 'message error';
                 messageDiv.style.display = 'block';
                 messageDiv.textContent = `Error: ${error.message}`;
@@ -145,7 +166,8 @@ window.addEventListener('beforeunload', function() {
             }
         });
 
-        // Initialize
+        // Initialize page
+        console.log('Auth page loaded');
         checkAuth();
     </script>
 </body>
