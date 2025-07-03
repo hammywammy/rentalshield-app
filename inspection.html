@@ -73,6 +73,8 @@
             cursor: pointer;
             margin: 0.5rem;
             transition: background 0.2s;
+            text-decoration: none;
+            display: inline-block;
         }
         
         .btn:hover {
@@ -272,8 +274,8 @@
       <p>Ready to start professional inspection</p>
     </div>
     <button id="start-inspection-btn" class="btn">Start Inspection</button>
-<button id="instant-test-btn" class="btn" style="background: orange;">⚡ Instant Test (Use Pre-made Photos)</button>
-<a href="/dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+    <button id="instant-test-btn" class="btn" style="background: orange;">⚡ Instant Test (Use Pre-made Photos)</button>
+    <a href="/dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
   </div>
   <div id="status-bar">Ready</div>
   <div id="step-instruction">Loading...</div>
@@ -567,6 +569,84 @@
             updateStep();
         }
 
+        // Instant test with pre-made photos
+        async function instantTestInspection() {
+            console.log('⚡ Starting instant test with pre-made photos');
+            
+            // Hide start screen, show status
+            startScreen.style.display = "none";
+            statusBar.style.display = "block";
+            statusBar.textContent = "⚡ Running instant test...";
+            
+            // Mock vehicle data
+            vehicleInfo = {
+                id: generateUUID(),
+                make: 'Test',
+                model: 'Vehicle', 
+                year: 2024,
+                color: 'Red',
+                license_plate: 'TEST123',
+                inspectionHistory: [],
+                totalInspections: 0
+            };
+            
+            currentVehicleId = vehicleInfo.id;
+            currentInspectionId = generateUUID();
+            
+            // Map your 18 test photos to the correct step names
+            const testPhotoMappings = {
+                'front-bumper.jpg': 'front_bumper',
+                'front-left-fender.jpg': 'driver_side_front_fender', 
+                'front-left-wheel.jpg': 'driver_side_front_wheel',
+                'left-side-doors.jpg': 'driver_side_doors',
+                'rear-left-wheel.jpg': 'driver_side_rear_wheel',
+                'rear-left-fender.jpg': 'driver_side_rear_fender',
+                'rear-bumper.jpg': 'rear_bumper',
+                'rear-right-fender.jpg': 'passenger_side_rear_fender',
+                'rear-right-wheel.jpg': 'passenger_side_rear_wheel',
+                'right-side-doors.jpg': 'passenger_side_doors',
+                'front-right-wheel.jpg': 'passenger_side_front_wheel',
+                'front-right-fender.jpg': 'passenger_side_front_fender',
+                'front-windshield.jpg': 'front_windshield',
+                'dashboard.jpg': 'interior_dashboard',
+                'front-seats.jpg': 'interior_front_seats',
+                'rear-seats.jpg': 'interior_rear_seats',
+                'odometer.jpg': 'odometer',
+                'trunk.jpg': 'trunk_cargo_area'
+            };
+            
+            // Create uploaded files array with your test photos
+            uploadedFiles = [];
+            let stepNumber = 1;
+            
+            for (const [fileName, stepName] of Object.entries(testPhotoMappings)) {
+                const fileInfo = {
+                    step: stepNumber,
+                    stepName: stepName,
+                    fileName: fileName,
+                    url: `https://cdn.rentalshield.net/test-videos/${fileName}`,
+                    cloudflare_path: `test-videos/${fileName}`,
+                    subFolder: 'test-videos',
+                    category: steps.find(s => s.name === stepName)?.category || 'test',
+                    type: "photo",
+                    timestamp: new Date().toISOString(),
+                    fileSize: "50 KB",
+                    vehicleId: currentVehicleId,
+                    inspectionId: currentInspectionId
+                };
+                
+                uploadedFiles.push(fileInfo);
+                stepNumber++;
+            }
+            
+            statusBar.textContent = `⚡ Created ${uploadedFiles.length} test photos - triggering webhook...`;
+            
+            // Wait 1 second then trigger webhook
+            setTimeout(() => {
+                triggerN8nWebhook();
+            }, 1000);
+        }
+
         // Update step
         function updateStep() {
             if (currentStep === -1) {
@@ -816,6 +896,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    body: JSON.stringify(webhookData)
                 });
 
                 if (response.ok) {
@@ -885,6 +966,12 @@
                     e.preventDefault();
                     console.log('🚀 Start inspection clicked');
                     startInspection();
+                });
+                
+                document.getElementById('instant-test-btn').addEventListener("click", (e) => {
+                    e.preventDefault();
+                    console.log('⚡ Instant test clicked');
+                    instantTestInspection();
                 });
                 
                 document.getElementById('photo-button').addEventListener("click", (e) => {
