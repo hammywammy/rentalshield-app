@@ -31,11 +31,11 @@ export default async (request, context) => {
       throw new Error('R2 credentials missing');
     }
 
-    // Create file path
-    const today = new Date().toISOString().split('T')[0];
-    const subFolder = `${today}/${userId}/${inspectionId}`;
-    const fullPath = `${subFolder}/${fileName}`;
-    const fileBuffer = await file.arrayBuffer();
+// Create proper folder structure
+const vehicleId = formData.get('vehicleId');
+const subFolder = `users/${userId}/vehicles/${vehicleId}/inspections/${inspectionId}`;
+const fullPath = `${subFolder}/${fileName}`;
+const fileBuffer = await file.arrayBuffer();
 
     // Calculate content hash (required!)
     const contentHash = await crypto.subtle.digest('SHA-256', fileBuffer)
