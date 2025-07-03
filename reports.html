@@ -3,171 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RentalShield - Reports</title>
+    <title>RentalShield - My Reports</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Copy the same styles from dashboard.html -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .user-info {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .nav-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .report-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 1rem;
+        }
+
+        .report-id {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .report-date {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .report-summary {
+            color: #555;
+            margin: 1rem 0;
+            line-height: 1.5;
+        }
+
+        .vehicle-info {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .view-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .view-btn:hover {
+            background: #218838;
+        }
+
+        .claim-btn {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .claim-btn:hover {
+            background: #e0a800;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .no-reports {
+            text-align: center;
+            background: white;
+            padding: 4rem;
+            border-radius: 15px;
+            color: #666;
+        }
+
+        .no-reports h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .start-inspection-btn {
+            background: #667eea;
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        .start-inspection-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+    </style>
 </head>
 <body>
-<div class="header">
-        <div class="logo">🛡️ RentalShield</div>
-        <div class="user-info">
-            <span id="user-name" class="loading">Loading...</span>
-            <span id="user-role" class="user-role" style="display: none;"></span>
-            <button class="logout-btn" onclick="handleLogout()">Logout</button>
-        </div>
-    </div>
-
     <div class="container">
-        <div class="welcome">
-            <h1>Welcome to your Dashboard</h1>
-            <p>Manage your vehicle inspections and documentation</p>
-            <button class="new-inspection-btn" onclick="startNewInspection()">
-                📱 Start New Inspection
-            </button>
-        </div>
-
-        <div id="vehicles-section">
-            <h2>Your Vehicles</h2>
-            <div id="vehicles-grid" class="vehicles-grid">
-                <div class="vehicle-card">
-                    <h3>Loading vehicles...</h3>
-                    <p>Please wait while we load your vehicle history</p>
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>🛡️ My Inspection Reports</h1>
+                <div class="user-info">
+                    Welcome back, <span id="user-email">Loading...</span>
                 </div>
             </div>
+            <button onclick="logout()" class="logout-btn">Sign Out</button>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav-buttons">
+            <a href="/dashboard.html" class="nav-btn">← Back to Dashboard</a>
+            <a href="/inspection.html" class="nav-btn">+ New Inspection</a>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div>🔄 Loading your reports...</div>
+        </div>
+
+        <!-- Reports Grid -->
+        <div id="reports-container" class="reports-grid" style="display: none;">
+            <!-- Reports will be populated here -->
+        </div>
+
+        <!-- No Reports State -->
+        <div id="no-reports" class="no-reports" style="display: none;">
+            <h3>📄 No inspection reports yet</h3>
+            <p>You haven't completed any vehicle inspections yet.</p>
+            <button onclick="startInspection()" class="start-inspection-btn">
+                Start Your First Inspection
+            </button>
         </div>
     </div>
 
     <script>
-        // Initialize Supabase with your credentials
+        // Initialize Supabase
         const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentUser = null;
 
-        // Check authentication and load user data
-        async function checkAuth() {
+        // Check authentication and load reports
+        async function init() {
             const { data: { session } } = await supabase.auth.getSession();
             
             if (!session) {
-                // No user logged in, redirect to auth
                 window.location.href = '/auth.html';
                 return;
             }
-            
+
             currentUser = session.user;
-            await displayUserInfo(session.user);
-            loadUserVehicles();
+            document.getElementById('user-email').textContent = currentUser.email;
+            
+            await loadReports();
         }
 
-        // Display user information
-        async function displayUserInfo(user) {
-            const userNameEl = document.getElementById('user-name');
-            const userRoleEl = document.getElementById('user-role');
-            
-            // Set user name/email
-            const userName = user.user_metadata?.full_name || user.email;
-            userNameEl.textContent = userName;
-            userNameEl.classList.remove('loading');
-            
-            // Get user role from database
+        // Load user's reports from database
+        async function loadReports() {
             try {
-                const { data: userData, error } = await supabase
-                    .from('users')
-                    .select('role')
-                    .eq('id', user.id)
-                    .single();
-                
-                if (userData && userData.role) {
-                    userRoleEl.textContent = userData.role;
-                    userRoleEl.style.display = 'inline';
-                } else {
-                    userRoleEl.textContent = 'user';
-                    userRoleEl.style.display = 'inline';
-                }
-            } catch (error) {
-                console.log('Could not fetch user role:', error);
-                userRoleEl.textContent = 'user';
-                userRoleEl.style.display = 'inline';
-            }
-        }
-
-        // Load user's vehicles
-        async function loadUserVehicles() {
-            const vehiclesGrid = document.getElementById('vehicles-grid');
-            
-            try {
-                // Try to load vehicles from database
-                const { data: vehicles, error } = await supabase
-                    .from('vehicles')
+                const { data: reports, error } = await supabase
+                    .from('reports')
                     .select('*')
-                    .eq('user_id', currentUser.id);
-                
-                if (vehicles && vehicles.length > 0) {
-                    // Display vehicles
-                    vehiclesGrid.innerHTML = vehicles.map(vehicle => `
-                        <div class="vehicle-card">
-                            <h3>${vehicle.make || 'Unknown'} ${vehicle.model || 'Vehicle'}</h3>
-                            <p>License: ${vehicle.license_plate || 'N/A'}</p>
-                            <p>VIN: ${vehicle.vin || 'N/A'}</p>
-                            <button onclick="viewVehicle('${vehicle.id}')">View Details</button>
-                        </div>
-                    `).join('');
-                } else {
-                    // No vehicles yet
-                    vehiclesGrid.innerHTML = `
-                        <div class="vehicle-card">
-                            <h3>No vehicles yet</h3>
-                            <p>Start your first inspection to add a vehicle</p>
-                        </div>
-                    `;
+                    .eq('user_id', currentUser.id)
+                    .order('inspection_date', { ascending: false });
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (error) {
+                    console.error('Error loading reports:', error);
+                    return;
                 }
+
+                if (!reports || reports.length === 0) {
+                    document.getElementById('no-reports').style.display = 'block';
+                    return;
+                }
+
+                displayReports(reports);
+                document.getElementById('reports-container').style.display = 'grid';
+                
             } catch (error) {
-                console.log('Could not load vehicles:', error);
-                vehiclesGrid.innerHTML = `
-                    <div class="vehicle-card">
-                        <h3>Coming Soon</h3>
-                        <p>Vehicle history will appear here after your first inspection</p>
-                    </div>
-                `;
+                console.error('Error:', error);
+                document.getElementById('loading').innerHTML = '<div style="color: #dc3545;">❌ Error loading reports</div>';
             }
+        }
+
+        // Display reports in the grid
+        function displayReports(reports) {
+            const container = document.getElementById('reports-container');
+            container.innerHTML = '';
+
+            reports.forEach(report => {
+                const reportCard = createReportCard(report);
+                container.appendChild(reportCard);
+            });
+        }
+
+        // Create individual report card
+        function createReportCard(report) {
+            const card = document.createElement('div');
+            card.className = 'report-card';
+            
+            const inspectionDate = new Date(report.inspection_date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const vehicleInfo = report.vehicle_info ? 
+                `License: ${report.vehicle_info.license_plate || 'N/A'}` : 
+                'Vehicle info not available';
+
+            card.innerHTML = `
+                <div class="report-header">
+                    <div class="report-id">Inspection #${report.inspection_id || report.id.slice(0, 8)}</div>
+                    <div class="report-date">${inspectionDate}</div>
+                </div>
+                
+                <div class="report-summary">
+                    <strong>Damage Summary:</strong><br>
+                    ${report.damage_summary || 'Analysis pending...'}
+                </div>
+                
+                <div class="vehicle-info">
+                    🚗 ${vehicleInfo}<br>
+                    📸 ${report.total_photos || 18} photos captured
+                </div>
+                
+                <div class="report-actions">
+                    <button onclick="viewReport('${report.pdf_url}')" class="action-btn view-btn">
+                        📄 View Report
+                    </button>
+                    <button onclick="makeClaim('${report.id}')" class="action-btn claim-btn">
+                        📋 Make Claim
+                    </button>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // View PDF report
+        function viewReport(pdfUrl) {
+            if (pdfUrl) {
+                window.open(pdfUrl, '_blank');
+            } else {
+                alert('Report PDF not yet available. Please check back in a few minutes.');
+            }
+        }
+
+        // Make insurance claim (Step 6 feature)
+        function makeClaim(reportId) {
+            // Store report ID for claim process
+            localStorage.setItem('claimReportId', reportId);
+            window.location.href = '/claim.html'; // We'll create this in Step 6
         }
 
         // Start new inspection
-        function startNewInspection() {
+        function startInspection() {
             // Store user info for inspection
             localStorage.setItem('currentUser', JSON.stringify({
                 id: currentUser.id,
                 email: currentUser.email,
                 name: currentUser.user_metadata?.full_name || currentUser.email
             }));
-            
-            // Redirect to inspection page
-            window.location.href = '/index.html';
+            window.location.href = '/inspection.html';
         }
 
-        // View vehicle details
-        function viewVehicle(vehicleId) {
-            console.log('Viewing vehicle:', vehicleId);
-            // TODO: Implement vehicle detail view
-            alert('Vehicle details coming soon!');
-        }
-
-        // Handle logout
-        async function handleLogout() {
+        // Logout function
+        async function logout() {
             await supabase.auth.signOut();
             window.location.href = '/auth.html';
         }
 
-        // Listen for auth state changes
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT' || !session) {
-                window.location.href = '/auth.html';
-            }
-        });
-
         // Initialize on page load
-        checkAuth();
+        init();
     </script>
 </body>
 </html>
