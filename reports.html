@@ -349,6 +349,13 @@
         let currentUser = null;
 
         // Check authentication and load user data
+        // Replace the makeClaim function in reports.html
+function makeClaim(reportId) {
+    // Store report ID for claim process
+    localStorage.setItem('claimReportId', reportId);
+    window.location.href = '/claim.html';
+}
+        
         async function checkAuth() {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
