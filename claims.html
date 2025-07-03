@@ -259,7 +259,57 @@
             font-weight: 600;
         }
 
-        @media (max-width: 768px) {
+        .photo-preview-item {
+            position: relative;
+            display: inline-block;
+        }
+
+        .photo-preview-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 2px solid #e9ecef;
+        }
+
+        .photo-remove {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-status {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .upload-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .upload-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .upload-progress {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
             .container {
                 padding: 1rem;
             }
@@ -341,6 +391,25 @@
                             />
                         </div>
                     </div>
+
+                    <div class="form-group">
+                        <label for="additional-photos">Additional Evidence Photos (Optional)</label>
+                        <input 
+                            type="file" 
+                            id="additional-photos" 
+                            class="form-control" 
+                            accept="image/*"
+                            multiple
+                            capture="environment"
+                        />
+                        <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
+                            Upload additional photos showing current damage, repair estimates, or other evidence
+                        </div>
+                        <div id="photo-preview" style="margin-top: 1rem; display: none;">
+                            <div style="font-weight: 500; margin-bottom: 0.5rem;">Selected Photos:</div>
+                            <div id="photo-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Step 3: Review -->
@@ -368,6 +437,7 @@
         let currentUser = null;
         let selectedReport = null;
         let userReports = [];
+        let uploadedPhotos = []; // Store uploaded photo URLs
 
         // Initialize page
         async function init() {
@@ -507,6 +577,11 @@
             submitBtn.textContent = 'Submitting...';
 
             try {
+                // First, upload any additional photos
+                submitBtn.textContent = 'Uploading Photos...';
+                const additionalPhotoUrls = await uploadPhotos();
+
+                submitBtn.textContent = 'Saving Claim...';
                 const claimData = {
                     report_id: selectedReport.id,
                     user_id: currentUser.id,
@@ -535,6 +610,7 @@
                     user_email: currentUser.email,
                     user_name: currentUser.user_metadata?.full_name || currentUser.email,
                     report_id: selectedReport.id,
+                    additional_photos: additionalPhotoUrls, // Include uploaded photos
                     claim_details: {
                         type: claimData.claim_type,
                         description: claimData.description,
@@ -580,6 +656,9 @@
             }
         }
 
+        // Initialize on page load
+        init();
+
         // Show error message
         function showError(message) {
             const container = document.getElementById('error-container');
@@ -606,9 +685,108 @@
             updateClaimSummary();
             validateForm();
         });
+        document.getElementById('additional-photos').addEventListener('change', handlePhotoSelection);
 
-        // Initialize on page load
-        init();
+        // Handle photo selection and preview
+        function handlePhotoSelection(event) {
+            const files = Array.from(event.target.files);
+            const photoPreview = document.getElementById('photo-preview');
+            const photoList = document.getElementById('photo-list');
+            
+            if (files.length > 0) {
+                photoPreview.style.display = 'block';
+                
+                files.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'photo-preview-item';
+                        previewItem.innerHTML = `
+                            <img src="${e.target.result}" class="photo-preview-img" alt="Preview ${index + 1}">
+                            <button type="button" class="photo-remove" onclick="removePhoto(${index})">&times;</button>
+                        `;
+                        photoList.appendChild(previewItem);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
+        // Remove photo from selection
+        function removePhoto(index) {
+            const photoInput = document.getElementById('additional-photos');
+            const dt = new DataTransfer();
+            const files = Array.from(photoInput.files);
+            
+            files.forEach((file, i) => {
+                if (i !== index) {
+                    dt.items.add(file);
+                }
+            });
+            
+            photoInput.files = dt.files;
+            
+            // Refresh preview
+            const photoList = document.getElementById('photo-list');
+            photoList.innerHTML = '';
+            if (photoInput.files.length === 0) {
+                document.getElementById('photo-preview').style.display = 'none';
+            } else {
+                handlePhotoSelection({ target: photoInput });
+            }
+        }
+
+        // Upload photos to Cloudflare R2
+        async function uploadPhotos() {
+            const photoInput = document.getElementById('additional-photos');
+            const files = Array.from(photoInput.files);
+            
+            if (files.length === 0) {
+                return [];
+            }
+
+            const uploadedUrls = [];
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'upload-status upload-progress';
+            statusDiv.textContent = `Uploading ${files.length} photo(s)...`;
+            document.getElementById('photo-preview').appendChild(statusDiv);
+
+            try {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileName = `claim-evidence-${Date.now()}-${i + 1}.jpg`;
+                    
+                    const formData = new FormData();
+                    formData.append('file', file, fileName);
+                    formData.append('fileName', fileName);
+                    formData.append('subFolder', 'claim-evidence');
+                    formData.append('userId', currentUser.id);
+
+                    const response = await fetch('/api/upload-photo', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        uploadedUrls.push(result.url);
+                        statusDiv.textContent = `Uploaded ${i + 1}/${files.length} photos...`;
+                    } else {
+                        throw new Error(`Failed to upload photo ${i + 1}`);
+                    }
+                }
+
+                statusDiv.className = 'upload-status upload-success';
+                statusDiv.textContent = `✅ Successfully uploaded ${files.length} photo(s)`;
+                return uploadedUrls;
+
+            } catch (error) {
+                console.error('Photo upload error:', error);
+                statusDiv.className = 'upload-status upload-error';
+                statusDiv.textContent = `❌ Failed to upload photos: ${error.message}`;
+                return [];
+            }
+        }
     </script>
 </body>
 </html>
