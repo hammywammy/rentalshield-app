@@ -415,14 +415,28 @@
             }
         }
 
-        // Make insurance claim (Step 6 feature)
-        function makeClaim(reportId) {
-            alert('Claims feature coming soon! This will allow you to submit insurance claims directly from your inspection reports.');
-            // TODO: Implement claims flow in Step 6
-            // localStorage.setItem('claimReportId', reportId);
-            // window.location.href = '/claim.html';
-        }
+       // Replace the makeClaim function in reports.html:
+function makeClaim(reportId) {
+    // Store report ID for claim process
+    localStorage.setItem('claimReportId', reportId);
+    window.location.href = '/claim.html';
+}
 
+// Add this to check for pre-selected report when claim.html loads:
+// In claim.html init() function, add this:
+const preSelectedReportId = localStorage.getItem('claimReportId');
+if (preSelectedReportId) {
+    // Auto-select the report
+    selectedReport = userReports.find(r => r.id === preSelectedReportId);
+    if (selectedReport) {
+        // Highlight the selected report in the UI
+        const reportElement = document.querySelector(`[onclick="selectReport('${preSelectedReportId}')"]`);
+        if (reportElement) {
+            reportElement.classList.add('selected');
+        }
+    }
+    localStorage.removeItem('claimReportId'); // Clean up
+}
         // Start new inspection
         function startInspection() {
             // Store user info for inspection
