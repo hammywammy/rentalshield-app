@@ -8,7 +8,7 @@ export default async (request, context) => {
         'Access-Control-Allow-Headers': 'Content-Type',
       },
     });
-  }
+  } 
 
   try {
     const formData = await request.formData();
