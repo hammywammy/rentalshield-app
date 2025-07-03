@@ -16,6 +16,7 @@ export default async (request, context) => {
     const fileName = formData.get('fileName');
     const userId = formData.get('userId');
     const inspectionId = formData.get('inspectionId');
+    const vehicleId = formData.get('vehicleId');
 
     if (!file || !fileName) {
       throw new Error('No file or filename provided');
@@ -25,17 +26,16 @@ export default async (request, context) => {
     const accountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
     const accessKeyId = Deno.env.get('CLOUDFLARE_R2_ACCESS_KEY_ID');
     const secretAccessKey = Deno.env.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY');
-    const bucketName = 'rental-shield'; // Use your ACTUAL bucket name
+    const bucketName = 'rental-shield';
 
     if (!accountId || !accessKeyId || !secretAccessKey) {
       throw new Error('R2 credentials missing');
     }
 
-// Create proper folder structure
-const vehicleId = formData.get('vehicleId');
-const subFolder = `users/${userId}/vehicles/${vehicleId}/inspections/${inspectionId}`;
-const fullPath = `${subFolder}/${fileName}`;
-const fileBuffer = await file.arrayBuffer();
+    // Create proper folder structure: users/vehicles/inspections
+    const subFolder = `users/${userId}/vehicles/${vehicleId}/inspections/${inspectionId}`;
+    const fullPath = `${subFolder}/${fileName}`;
+    const fileBuffer = await file.arrayBuffer();
 
     // Calculate content hash (required!)
     const contentHash = await crypto.subtle.digest('SHA-256', fileBuffer)
@@ -109,7 +109,7 @@ const fileBuffer = await file.arrayBuffer();
       headers: {
         'Host': host,
         'X-Amz-Date': amzDate,
-        'X-Amz-Content-Sha256': contentHash, // This was missing!
+        'X-Amz-Content-Sha256': contentHash,
         'Authorization': authorizationHeader,
         'Content-Type': file.type || 'image/jpeg',
       },
