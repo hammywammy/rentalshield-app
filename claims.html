@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RentalShield - My Claims</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .nav-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .claims-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .claim-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .claim-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .claim-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .claim-id {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-denied {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-processing {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .claim-details {
+            margin: 1rem 0;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .detail-value {
+            color: #333;
+        }
+
+        .claim-description {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .claim-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .no-claims {
+            text-align: center;
+            background: white;
+            padding: 4rem;
+            border-radius: 15px;
+            color: #666;
+        }
+
+        .no-claims h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .new-claim-btn {
+            background: #28a745;
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .new-claim-btn:hover {
+            background: #218838;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .claims-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>🛡️ My Insurance Claims</h1>
+                <div style="color: #666; font-size: 0.9rem;">
+                    Track and manage your submitted claims
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav-buttons">
+            <a href="/dashboard.html" class="nav-btn">← Dashboard</a>
+            <a href="/reports.html" class="nav-btn">Reports</a>
+            <a href="/claim.html" class="nav-btn new-claim-btn">+ New Claim</a>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="total-claims">0</div>
+                <div class="stat-label">Total Claims</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pending-claims">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="approved-claims">0</div>
+                <div class="stat-label">Approved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-amount">$0</div>
+                <div class="stat-label">Total Claimed</div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div>🔄 Loading your claims...</div>
+        </div>
+
+        <!-- Claims Grid -->
+        <div id="claims-container" class="claims-grid" style="display: none;">
+            <!-- Claims will be populated here -->
+        </div>
+
+        <!-- No Claims State -->
+        <div id="no-claims" class="no-claims" style="display: none;">
+            <h3>📋 No claims submitted yet</h3>
+            <p>Submit your first insurance claim from an inspection report.</p>
+            <a href="/claim.html" class="new-claim-btn">Submit First Claim</a>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://aganyvysumqdfqajwgim.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYW55dnlzdW1xZGZxYWp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4MTI0MzIsImV4cCI6MjA2NjM4ODQzMn0.0wULj5KIICC1eBDs3DuyqgHrmIwI8CQHYTIjy4g3swM';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let currentUser = null;
+
+        // Initialize page
+        async function init() {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
+                window.location.href = '/auth.html';
+                return;
+            }
+
+            currentUser = session.user;
+            await loadClaims();
+        }
+
+        // Load user's claims
+        async function loadClaims() {
+            try {
+                const { data: claims, error } = await supabase
+                    .from('claims')
+                    .select(`
+                        *,
+                        reports:report_id (
+                            id,
+                            inspection_id,
+                            created_at,
+                            damage_summary
+                        )
+                    `)
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+
+                document.getElementById('loading').style.display = 'none';
+
+                if (error) {
+                    console.error('Error loading claims:', error);
+                    showError('Unable to load claims. Please try again.');
+                    return;
+                }
+
+                updateStats(claims);
+
+                if (!claims || claims.length === 0) {
+                    document.getElementById('no-claims').style.display = 'block';
+                    return;
+                }
+
+                displayClaims(claims);
+                document.getElementById('claims-container').style.display = 'grid';
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').innerHTML = '<div style="color: #dc3545;">❌ Error loading claims</div>';
+            }
+        }
+
+        // Update statistics
+        function updateStats(claims) {
+            const totalClaims = claims.length;
+            const pendingClaims = claims.filter(c => c.status === 'pending').length;
+            const approvedClaims = claims.filter(c => c.status === 'approved').length;
+            const totalAmount = claims.reduce((sum, c) => sum + (parseFloat(c.estimated_cost) || 0), 0);
+
+            document.getElementById('total-claims').textContent = totalClaims;
+            document.getElementById('pending-claims').textContent = pendingClaims;
+            document.getElementById('approved-claims').textContent = approvedClaims;
+            document.getElementById('total-amount').textContent = ' + totalAmount.toFixed(2);
+        }
+
+        // Display claims
+        function displayClaims(claims) {
+            const container = document.getElementById('claims-container');
+            container.innerHTML = '';
+
+            claims.forEach(claim => {
+                const claimCard = createClaimCard(claim);
+                container.appendChild(claimCard);
+            });
+        }
+
+        // Create individual claim card
+        function createClaimCard(claim) {
+            const card = document.createElement('div');
+            card.className = 'claim-card';
+
+            const claimDate = new Date(claim.created_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+
+            const reportInfo = claim.reports || {};
+            const reportDate = reportInfo.created_at 
+                ? new Date(reportInfo.created_at).toLocaleDateString() 
+                : 'Unknown';
+
+            card.innerHTML = `
+                <div class="claim-header">
+                    <div class="claim-id">Claim #${claim.id.slice(0, 8)}</div>
+                    <div class="status-badge status-${claim.status}">
+                        ${claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
+                    </div>
+                </div>
+
+                <div class="claim-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Type:</span>
+                        <span class="detail-value">${claim.claim_type.charAt(0).toUpperCase() + claim.claim_type.slice(1)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Amount:</span>
+                        <span class="detail-value">${parseFloat(claim.estimated_cost || 0).toFixed(2)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Submitted:</span>
+                        <span class="detail-value">${claimDate}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Report:</span>
+                        <span class="detail-value">Inspection #${reportInfo.inspection_id?.slice(0, 8) || reportInfo.id?.slice(0, 8) || 'Unknown'}</span>
+                    </div>
+                </div>
+
+                <div class="claim-description">
+                    <strong>Description:</strong><br>
+                    ${claim.description || 'No description provided'}
+                </div>
+
+                <div class="claim-actions">
+                    <button onclick="viewClaimDetails('${claim.id}')" class="action-btn btn-primary">
+                        View Details
+                    </button>
+                    ${claim.status === 'pending' ? `
+                        <button onclick="editClaim('${claim.id}')" class="action-btn btn-secondary">
+                            Edit
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+
+            return card;
+        }
+
+        // View claim details
+        function viewClaimDetails(claimId) {
+            // For now, show alert - in future, create detailed view
+            alert(`Claim details for #${claimId.slice(0, 8)}\n\nDetailed claim view coming soon!`);
+        }
+
+        // Edit claim (only for pending claims)
+        function editClaim(claimId) {
+            alert(`Edit functionality for claim #${claimId.slice(0, 8)} coming soon!`);
+        }
+
+        // Show error message
+        function showError(message) {
+            document.getElementById('loading').innerHTML = `
+                <div style="color: #dc3545; text-align: center;">
+                    ❌ ${message}
+                </div>
+            `;
+        }
+
+        // Initialize on page load
+        init();
