@@ -6,7 +6,7 @@ export default async (request, context) => {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
-      }, 
+      },
     });
   }
 
@@ -25,7 +25,7 @@ export default async (request, context) => {
     const accountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
     const accessKeyId = Deno.env.get('CLOUDFLARE_R2_ACCESS_KEY_ID');
     const secretAccessKey = Deno.env.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY');
-    const bucketName = Deno.env.get('CLOUDFLARE_R2_BUCKET_NAME') || 'rentalshield-photos';
+    const bucketName = 'rental-shield'; // Use your ACTUAL bucket name
 
     if (!accountId || !accessKeyId || !secretAccessKey) {
       throw new Error('R2 credentials missing');
@@ -37,7 +37,12 @@ export default async (request, context) => {
     const fullPath = `${subFolder}/${fileName}`;
     const fileBuffer = await file.arrayBuffer();
 
-    // AWS4 Signature calculation
+    // Calculate content hash (required!)
+    const contentHash = await crypto.subtle.digest('SHA-256', fileBuffer)
+      .then(buf => Array.from(new Uint8Array(buf))
+      .map(b => b.toString(16).padStart(2, '0')).join(''));
+
+    // Create AWS4 signature
     const region = 'auto';
     const service = 's3';
     const host = `${accountId}.r2.cloudflarestorage.com`;
@@ -45,27 +50,21 @@ export default async (request, context) => {
     const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
     const dateStamp = amzDate.slice(0, 8);
 
-    // Create canonical request
+    // Canonical request
     const canonicalUri = `/${bucketName}/${fullPath}`;
-    const canonicalQueryString = '';
-    const canonicalHeaders = `host:${host}\nx-amz-date:${amzDate}\n`;
-    const signedHeaders = 'host;x-amz-date';
-    
-    // Hash payload
-    const payloadHash = await crypto.subtle.digest('SHA-256', fileBuffer)
-      .then(buf => Array.from(new Uint8Array(buf))
-      .map(b => b.toString(16).padStart(2, '0')).join(''));
+    const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${contentHash}\nx-amz-date:${amzDate}\n`;
+    const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
 
     const canonicalRequest = [
       'PUT',
       canonicalUri,
-      canonicalQueryString,
+      '', // query string
       canonicalHeaders,
       signedHeaders,
-      payloadHash
+      contentHash
     ].join('\n');
 
-    // Create string to sign
+    // String to sign
     const algorithm = 'AWS4-HMAC-SHA256';
     const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
     const canonicalRequestHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalRequest))
@@ -80,42 +79,39 @@ export default async (request, context) => {
     ].join('\n');
 
     // Calculate signature
+    const textEncoder = new TextEncoder();
+    
     const getSignatureKey = async (key, dateStamp, regionName, serviceName) => {
-      const kDate = await crypto.subtle.importKey(
-        'raw', new TextEncoder().encode(`AWS4${key}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-      ).then(k => crypto.subtle.sign('HMAC', k, new TextEncoder().encode(dateStamp)));
+      const kDate = await crypto.subtle.importKey('raw', textEncoder.encode(`AWS4${key}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+        .then(k => crypto.subtle.sign('HMAC', k, textEncoder.encode(dateStamp)));
       
-      const kRegion = await crypto.subtle.importKey(
-        'raw', kDate, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-      ).then(k => crypto.subtle.sign('HMAC', k, new TextEncoder().encode(regionName)));
+      const kRegion = await crypto.subtle.importKey('raw', kDate, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+        .then(k => crypto.subtle.sign('HMAC', k, textEncoder.encode(regionName)));
       
-      const kService = await crypto.subtle.importKey(
-        'raw', kRegion, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-      ).then(k => crypto.subtle.sign('HMAC', k, new TextEncoder().encode(serviceName)));
+      const kService = await crypto.subtle.importKey('raw', kRegion, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+        .then(k => crypto.subtle.sign('HMAC', k, textEncoder.encode(serviceName)));
       
-      return crypto.subtle.importKey(
-        'raw', kService, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-      ).then(k => crypto.subtle.sign('HMAC', k, new TextEncoder().encode('aws4_request')));
+      return crypto.subtle.importKey('raw', kService, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+        .then(k => crypto.subtle.sign('HMAC', k, textEncoder.encode('aws4_request')));
     };
 
     const signingKey = await getSignatureKey(secretAccessKey, dateStamp, region, service);
-    const signature = await crypto.subtle.importKey(
-      'raw', signingKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-    ).then(k => crypto.subtle.sign('HMAC', k, new TextEncoder().encode(stringToSign)))
-    .then(sig => Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join(''));
+    const signature = await crypto.subtle.importKey('raw', signingKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+      .then(k => crypto.subtle.sign('HMAC', k, textEncoder.encode(stringToSign)))
+      .then(sig => Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join(''));
 
-    // Create authorization header
+    // Authorization header
     const authorizationHeader = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
     // Upload to R2
-    const uploadResponse = await fetch(`https://${host}${canonicalUri}`, {
+    const uploadResponse = await fetch(`https://${host}/${bucketName}/${fullPath}`, {
       method: 'PUT',
       headers: {
         'Host': host,
         'X-Amz-Date': amzDate,
+        'X-Amz-Content-Sha256': contentHash, // This was missing!
         'Authorization': authorizationHeader,
         'Content-Type': file.type || 'image/jpeg',
-        'Content-Length': fileBuffer.byteLength.toString(),
       },
       body: fileBuffer
     });
