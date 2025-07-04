@@ -117,50 +117,65 @@
             min-height: 120px;
         }
 
-        .report-preview {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 8px;
-            border: 2px solid #e9ecef;
+        .selection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
         }
 
-        .report-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem;
-            background: white;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
+        .selection-item {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .report-item:hover {
-            background: #f0f8ff;
+        .selection-item:hover {
             border-color: #667eea;
+            background: #f0f8ff;
         }
 
-        .report-item.selected {
-            background: #e3f2fd;
-            border: 2px solid #667eea;
+        .selection-item.selected {
+            border-color: #28a745;
+            background: #e8f5e8;
         }
 
-        .report-info {
-            flex: 1;
+        .vehicle-card {
+            text-align: center;
         }
 
-        .report-title {
-            font-weight: 500;
-            margin-bottom: 0.25rem;
+        .vehicle-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: #333;
         }
 
-        .report-meta {
-            font-size: 0.85rem;
+        .vehicle-details {
             color: #666;
+            font-size: 0.9rem;
         }
 
-        .damage-badge {
+        .inspection-card {
+            text-align: center;
+        }
+
+        .inspection-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .inspection-date {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .damage-indicator {
+            display: inline-block;
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 0.8rem;
@@ -175,18 +190,6 @@
         .damage-no {
             background: #d1edff;
             color: #0c5460;
-        }
-
-        .cost-input-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .currency-symbol {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #333;
         }
 
         .submit-btn {
@@ -255,6 +258,16 @@
             font-weight: 600;
         }
 
+        .step-indicator {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -262,6 +275,10 @@
             
             .nav-buttons {
                 flex-direction: column;
+            }
+
+            .selection-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -271,7 +288,7 @@
         <!-- Header -->
         <div class="header">
             <h1>🛡️ Submit Insurance Claim</h1>
-            <p>File a claim based on your inspection report</p>
+            <p>Select your vehicle and inspection, then file your claim</p>
         </div>
 
         <!-- Navigation -->
@@ -283,22 +300,33 @@
         <!-- Claim Form -->
         <div class="claim-form">
             <div id="loading" class="loading">
-                Loading your reports...
+                Loading your vehicles and inspections...
             </div>
 
             <div id="error-container"></div>
 
             <form id="claim-form" style="display: none;">
-                <!-- Step 1: Select Report -->
-                <div class="form-section">
-                    <h3>📋 Select Inspection Report</h3>
-                    <div id="reports-list" class="report-preview">
-                        <!-- Reports will be loaded here -->
+                <!-- Step 1: Select Vehicle -->
+                <div class="form-section" id="vehicle-section">
+                    <div class="step-indicator">Step 1 of 3</div>
+                    <h3>🚗 Select Vehicle</h3>
+                    <div id="vehicles-list" class="selection-grid">
+                        <!-- Vehicles will be loaded here -->
                     </div>
                 </div>
 
-                <!-- Step 2: Claim Details -->
-                <div class="form-section">
+                <!-- Step 2: Select Inspection -->
+                <div class="form-section" id="inspection-section" style="display: none;">
+                    <div class="step-indicator">Step 2 of 3</div>
+                    <h3>📋 Select Inspection Report</h3>
+                    <div id="inspections-list" class="selection-grid">
+                        <!-- Inspections will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Step 3: Claim Details -->
+                <div class="form-section" id="details-section" style="display: none;">
+                    <div class="step-indicator">Step 3 of 3</div>
                     <h3>📝 Claim Details</h3>
                     
                     <div class="form-group">
@@ -348,21 +376,17 @@
                         ></textarea>
                     </div>
 
-
-                </div>
-
-                <!-- Step 3: Review -->
-                <div class="form-section">
+                    <!-- Review -->
                     <h3>👀 Review Your Claim</h3>
                     <div id="claim-summary" class="claim-summary">
-                        Select a report and fill details to see summary
+                        Complete all steps to see summary
                     </div>
-                </div>
 
-                <!-- Submit Button -->
-                <button type="submit" id="submit-btn" class="submit-btn" disabled>
-                    Submit Claim
-                </button>
+                    <!-- Submit Button -->
+                    <button type="submit" id="submit-btn" class="submit-btn" disabled>
+                        Submit Claim
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -374,8 +398,10 @@
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentUser = null;
+        let selectedVehicle = null;
         let selectedReport = null;
         let userReports = [];
+        let userVehicles = [];
 
         // Initialize page
         async function init() {
@@ -387,11 +413,11 @@
             }
 
             currentUser = session.user;
-            await loadUserReports();
+            await loadUserData();
         }
 
-        // Load user's reports
-        async function loadUserReports() {
+        // Load user's reports and extract vehicle data
+        async function loadUserData() {
             try {
                 const { data: reports, error } = await supabase
                     .from('reports')
@@ -402,32 +428,95 @@
                 if (error) throw error;
 
                 userReports = reports;
-                displayReports(reports);
+                
+                // Extract unique vehicles from reports
+                const vehicleMap = new Map();
+                reports.forEach(report => {
+                    if (report.vehicle_id) {
+                        let vehicleInfo = {
+                            vehicle_id: report.vehicle_id,
+                            license_plate: 'Unknown',
+                            make: 'Unknown',
+                            model: 'Unknown',
+                            year: 'Unknown',
+                            color: 'Unknown'
+                        };
+
+                        // Try to parse vehicle_info if it exists
+                        if (report.vehicle_info) {
+                            try {
+                                const parsed = typeof report.vehicle_info === 'string' ? 
+                                    JSON.parse(report.vehicle_info) : report.vehicle_info;
+                                vehicleInfo = { ...vehicleInfo, ...parsed };
+                            } catch (e) {
+                                console.log('Could not parse vehicle_info for report:', report.id);
+                            }
+                        }
+
+                        vehicleMap.set(report.vehicle_id, vehicleInfo);
+                    }
+                });
+
+                userVehicles = Array.from(vehicleMap.values());
+                
+                if (userVehicles.length === 0) {
+                    showError('No vehicles found. Please complete an inspection first.');
+                    return;
+                }
+
+                displayVehicles();
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('claim-form').style.display = 'block';
 
             } catch (error) {
-                console.error('Error loading reports:', error);
-                showError('Unable to load your reports. Please try again.');
+                console.error('Error loading user data:', error);
+                showError('Unable to load your data. Please try again.');
             }
         }
 
-        // Display reports for selection
-        function displayReports(reports) {
-            const reportsContainer = document.getElementById('reports-list');
+        // Display vehicles for selection
+        function displayVehicles() {
+            const vehiclesContainer = document.getElementById('vehicles-list');
             
-            if (reports.length === 0) {
-                reportsContainer.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: #666;">
-                        <p>No inspection reports found.</p>
-                        <a href="/inspection.html" style="color: #667eea;">Complete an inspection first →</a>
+            vehiclesContainer.innerHTML = userVehicles.map(vehicle => `
+                <div class="selection-item vehicle-card" onclick="selectVehicle('${vehicle.vehicle_id}')">
+                    <div class="vehicle-title">${vehicle.make} ${vehicle.model}</div>
+                    <div class="vehicle-details">
+                        ${vehicle.year} • ${vehicle.color}<br>
+                        License: ${vehicle.license_plate}
                     </div>
-                `;
-                return;
-            }
+                </div>
+            `).join('');
+        }
 
-            reportsContainer.innerHTML = reports.map(report => {
-                const date = new Date(report.created_at).toLocaleDateString();
+        // Select a vehicle
+        function selectVehicle(vehicleId) {
+            // Remove previous selection
+            document.querySelectorAll('.vehicle-card').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Add selection to clicked item
+            event.target.closest('.vehicle-card').classList.add('selected');
+
+            selectedVehicle = userVehicles.find(v => v.vehicle_id === vehicleId);
+            
+            // Load inspections for this vehicle
+            loadInspectionsForVehicle(vehicleId);
+            
+            // Show inspection section
+            document.getElementById('inspection-section').style.display = 'block';
+            document.getElementById('inspection-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Load inspections for selected vehicle
+        function loadInspectionsForVehicle(vehicleId) {
+            const vehicleReports = userReports.filter(r => r.vehicle_id === vehicleId);
+            const inspectionsContainer = document.getElementById('inspections-list');
+            
+            inspectionsContainer.innerHTML = vehicleReports.map(report => {
+                const date = new Date(report.created_at);
+                const dateStr = date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const hasDamage = report.damage_summary && 
                     (report.damage_summary.toLowerCase().includes('damage') || 
                      report.damage_summary.toLowerCase().includes('scratch') ||
@@ -435,12 +524,10 @@
                      report.damage_summary.toLowerCase().includes('confirmed'));
 
                 return `
-                    <div class="report-item" onclick="selectReport('${report.id}')">
-                        <div class="report-info">
-                            <div class="report-title">Inspection #${report.inspection_id?.slice(0, 8) || report.id.slice(0, 8)}</div>
-                            <div class="report-meta">${date} • ${report.total_photos || 18} photos</div>
-                        </div>
-                        <div class="damage-badge ${hasDamage ? 'damage-yes' : 'damage-no'}">
+                    <div class="selection-item inspection-card" onclick="selectInspection('${report.id}')">
+                        <div class="inspection-title">Inspection ${report.id.slice(0, 8)}</div>
+                        <div class="inspection-date">${dateStr}</div>
+                        <div class="damage-indicator ${hasDamage ? 'damage-yes' : 'damage-no'}">
                             ${hasDamage ? 'Damage Found' : 'Clean'}
                         </div>
                     </div>
@@ -448,27 +535,31 @@
             }).join('');
         }
 
-        // Select a report for the claim
-        function selectReport(reportId) {
+        // Select an inspection
+        function selectInspection(reportId) {
             // Remove previous selection
-            document.querySelectorAll('.report-item').forEach(item => {
+            document.querySelectorAll('.inspection-card').forEach(item => {
                 item.classList.remove('selected');
             });
 
             // Add selection to clicked item
-            event.target.closest('.report-item').classList.add('selected');
+            event.target.closest('.inspection-card').classList.add('selected');
 
             selectedReport = userReports.find(r => r.id === reportId);
+            
+            // Show details section
+            document.getElementById('details-section').style.display = 'block';
+            document.getElementById('details-section').scrollIntoView({ behavior: 'smooth' });
+            
             updateClaimSummary();
-            validateForm();
         }
 
         // Update claim summary
         function updateClaimSummary() {
             const summaryContainer = document.getElementById('claim-summary');
             
-            if (!selectedReport) {
-                summaryContainer.innerHTML = '<p>Select a report to see claim summary</p>';
+            if (!selectedVehicle || !selectedReport) {
+                summaryContainer.innerHTML = '<p>Complete all steps to see summary</p>';
                 return;
             }
 
@@ -478,11 +569,11 @@
 
             summaryContainer.innerHTML = `
                 <div class="summary-item">
-                    <span>Report:</span>
-                    <span>Inspection #${selectedReport.inspection_id?.slice(0, 8) || selectedReport.id.slice(0, 8)}</span>
+                    <span>Vehicle:</span>
+                    <span>${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.license_plate})</span>
                 </div>
                 <div class="summary-item">
-                    <span>Date:</span>
+                    <span>Inspection:</span>
                     <span>${new Date(selectedReport.created_at).toLocaleDateString()}</span>
                 </div>
                 <div class="summary-item">
@@ -491,9 +582,11 @@
                 </div>
                 <div class="summary-item">
                     <span>Damage Location:</span>
-                    <span>${damageLocation ? damageLocation.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase()) : 'Not selected'}</span>
+                    <span>${damageLocation ? damageLocation.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Not selected'}</span>
                 </div>
             `;
+
+            validateForm();
         }
 
         // Validate form and enable/disable submit button
@@ -502,7 +595,7 @@
             const damageLocation = document.getElementById('damage-location').value;
             const description = document.getElementById('description').value;
             
-            const isValid = selectedReport && claimType && damageLocation && description.trim();
+            const isValid = selectedVehicle && selectedReport && claimType && damageLocation && description.trim();
             document.getElementById('submit-btn').disabled = !isValid;
         }
 
@@ -536,50 +629,43 @@
                 // Update status to show document generation
                 submitBtn.textContent = 'Generating Insurance Document...';
 
-                // Trigger n8n to generate insurance claim document
-                const insuranceDocData = {
+                // Send clean data to n8n webhook
+                const webhookData = {
                     claim_id: claimRecord.id,
                     user_id: currentUser.id,
                     user_email: currentUser.email,
                     user_name: currentUser.user_metadata?.full_name || currentUser.email,
+                    
+                    // Vehicle information
+                    vehicle_id: selectedVehicle.vehicle_id,
+                    vehicle_license_plate: selectedVehicle.license_plate,
+                    vehicle_make: selectedVehicle.make,
+                    vehicle_model: selectedVehicle.model,
+                    vehicle_year: selectedVehicle.year,
+                    vehicle_color: selectedVehicle.color,
+                    
+                    // Report information  
                     report_id: selectedReport.id,
+                    inspection_date: selectedReport.created_at,
+                    damage_summary: selectedReport.damage_summary,
+                    pdf_url: selectedReport.pdf_url,
+                    total_photos: selectedReport.total_photos,
                     
-                    // Vehicle Information (extracted from report)
-                    vehicle_data: selectedReport.vehicle_info ? 
-                        (typeof selectedReport.vehicle_info === 'string' ? 
-                            JSON.parse(selectedReport.vehicle_info) : 
-                            selectedReport.vehicle_info) : 
-                        {
-                            license_plate: 'Unknown',
-                            make: 'Unknown',
-                            model: 'Unknown', 
-                            year: 'Unknown',
-                            color: 'Unknown'
-                        },
-                    
-                    claim_details: {
-                        type: claimData.claim_type,
-                        damage_location: claimData.damage_location,
-                        description: claimData.description,
-                        claim_date: new Date().toISOString()
-                    },
-                    
-                    report_details: {
-                        inspection_date: selectedReport.created_at,
-                        damage_summary: selectedReport.damage_summary,
-                        pdf_url: selectedReport.pdf_url,
-                        total_photos: selectedReport.total_photos
-                    }
+                    // Claim details
+                    claim_type: claimData.claim_type,
+                    damage_location: claimData.damage_location,
+                    description: claimData.description,
+                    claim_date: new Date().toISOString()
                 };
 
-                console.log('📤 Sending to insurance document generator:', insuranceDocData);
+                console.log('📤 Sending to n8n webhook:', webhookData);
 
                 const webhookResponse = await fetch('https://hamzaw.app.n8n.cloud/webhook-test/bde57252-616c-414c-bf0a-536a9d7dd5ad', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(insuranceDocData)
+                    body: JSON.stringify(webhookData)
                 });
 
                 if (webhookResponse.ok) {
@@ -615,18 +701,9 @@
 
         // Event listeners
         document.getElementById('claim-form').addEventListener('submit', submitClaim);
-        document.getElementById('claim-type').addEventListener('change', () => {
-            updateClaimSummary();
-            validateForm();
-        });
-        document.getElementById('damage-location').addEventListener('change', () => {
-            updateClaimSummary();
-            validateForm();
-        });
-        document.getElementById('description').addEventListener('input', () => {
-            updateClaimSummary();
-            validateForm();
-        });
+        document.getElementById('claim-type').addEventListener('change', updateClaimSummary);
+        document.getElementById('damage-location').addEventListener('change', updateClaimSummary);
+        document.getElementById('description').addEventListener('input', updateClaimSummary);
 
         // Initialize on page load
         init();
