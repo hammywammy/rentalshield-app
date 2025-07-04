@@ -543,22 +543,32 @@
                     user_email: currentUser.email,
                     user_name: currentUser.user_metadata?.full_name || currentUser.email,
                     report_id: selectedReport.id,
-                    inspection_id: selectedReport.inspection_id,
-                    vehicle_id: selectedReport.vehicle_id,
+                    
+                    // Vehicle Information (extracted from report)
+                    vehicle_data: selectedReport.vehicle_info ? 
+                        (typeof selectedReport.vehicle_info === 'string' ? 
+                            JSON.parse(selectedReport.vehicle_info) : 
+                            selectedReport.vehicle_info) : 
+                        {
+                            license_plate: 'Unknown',
+                            make: 'Unknown',
+                            model: 'Unknown', 
+                            year: 'Unknown',
+                            color: 'Unknown'
+                        },
+                    
                     claim_details: {
                         type: claimData.claim_type,
                         damage_location: claimData.damage_location,
                         description: claimData.description,
                         claim_date: new Date().toISOString()
                     },
-                    report_data: {
-                        inspection_id: selectedReport.inspection_id,
+                    
+                    report_details: {
                         inspection_date: selectedReport.created_at,
                         damage_summary: selectedReport.damage_summary,
                         pdf_url: selectedReport.pdf_url,
-                        total_photos: selectedReport.total_photos,
-                        vehicle_info: selectedReport.vehicle_info,
-                        vehicle_id: selectedReport.vehicle_id
+                        total_photos: selectedReport.total_photos
                     }
                 };
 
