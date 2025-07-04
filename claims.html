@@ -348,21 +348,7 @@
                         ></textarea>
                     </div>
 
-                    <div class="form-group">
-                        <label for="estimated-cost">Estimated Repair Cost</label>
-                        <div class="cost-input-group">
-                            <span class="currency-symbol">$</span>
-                            <input 
-                                type="number" 
-                                id="estimated-cost" 
-                                class="form-control" 
-                                placeholder="0.00"
-                                min="0"
-                                step="0.01"
-                                required
-                            />
-                        </div>
-                    </div>
+
                 </div>
 
                 <!-- Step 3: Review -->
@@ -489,7 +475,6 @@
             const claimType = document.getElementById('claim-type').value;
             const damageLocation = document.getElementById('damage-location').value;
             const description = document.getElementById('description').value;
-            const estimatedCost = document.getElementById('estimated-cost').value;
 
             summaryContainer.innerHTML = `
                 <div class="summary-item">
@@ -508,10 +493,6 @@
                     <span>Damage Location:</span>
                     <span>${damageLocation ? damageLocation.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase()) : 'Not selected'}</span>
                 </div>
-                <div class="summary-item">
-                    <span>Estimated Cost:</span>
-                    <span>${estimatedCost ? '$' + parseFloat(estimatedCost).toFixed(2) : 'Not specified'}</span>
-                </div>
             `;
         }
 
@@ -520,9 +501,8 @@
             const claimType = document.getElementById('claim-type').value;
             const damageLocation = document.getElementById('damage-location').value;
             const description = document.getElementById('description').value;
-            const estimatedCost = document.getElementById('estimated-cost').value;
             
-            const isValid = selectedReport && claimType && damageLocation && description.trim() && estimatedCost;
+            const isValid = selectedReport && claimType && damageLocation && description.trim();
             document.getElementById('submit-btn').disabled = !isValid;
         }
 
@@ -541,7 +521,6 @@
                     claim_type: document.getElementById('claim-type').value,
                     damage_location: document.getElementById('damage-location').value,
                     description: document.getElementById('description').value,
-                    estimated_cost: parseFloat(document.getElementById('estimated-cost').value),
                     status: 'processing'
                 };
 
@@ -570,7 +549,6 @@
                         type: claimData.claim_type,
                         damage_location: claimData.damage_location,
                         description: claimData.description,
-                        estimated_cost: claimData.estimated_cost,
                         claim_date: new Date().toISOString()
                     },
                     report_data: {
@@ -636,10 +614,6 @@
             validateForm();
         });
         document.getElementById('description').addEventListener('input', () => {
-            updateClaimSummary();
-            validateForm();
-        });
-        document.getElementById('estimated-cost').addEventListener('input', () => {
             updateClaimSummary();
             validateForm();
         });
